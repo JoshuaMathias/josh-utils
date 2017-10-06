@@ -1,0 +1,7 @@
+(-[.,]?\p{N}+([.,]\p{N}+)*)	# Numbers with - in front
+(([.,]?\p{N})[.,][\p{N}])	# Numbers
+(((\-|\+|\()\p{N}(\-|\.|\+|\)))?( |\-|\.|\+|\()?\p{N}{1,3}(\-|\.|\+|\)?)?(( |\-|\.|\+)\p{N}{0,10}(\-|\.|\+)?){1,10})	# Phone numbers
+([\p{L}\p{N}\p{Mn}!#$%&"'|*+\-/=?^_`~}{]+[\p{L}\p{N}\p{Mn}!#$%&"'|*+\-/=?^_`~}{.]*@[\p{L}\p{N}\p{Mn}!#$%&"'|*+\-/=?^_`~}{]+([\p{L}\p{N}\p{Mn}!#$%&"'|*+\-/=?^_`}{~.]*[\p{L}\p{N}\p{Mn}])?)	# Email addresses
+(((https?|ftp|mailto|file|data|irc|C)?:(//)?)?[/~\\][\p{L}\p{N}\p{Mn}/\\]+([\p{L}\p{N}\p{Mn}:!#$%&"'|*+\-/\\=?^_`~@.]*[\p{L}\p{N}\p{Mn}/\\])?)	# URLs and paths
+((\p{L}{1,2}\.)?(\p{L}\.)+)	# Abbreviations of one letter
+(-){2,}	# Repeated hyphens

@@ -16,6 +16,45 @@ import java.util.regex.Pattern;
  */
 public class StatUtils {
 	
+	public static HashMap<String, Integer> getTokenCounts(String text) {
+		String[] tokens = text.split("\\s");
+		HashMap<String, Integer> tokenCounts = new HashMap<String, Integer>();
+		int count = 0;
+		for (int i=0; i<tokens.length; i++) {
+			if (tokens[i].length() > 0) {
+				incrementOne(tokenCounts, tokens[i]);
+				count++;
+			}
+		}
+		System.out.println("Number of tokens: "+count);
+		return tokenCounts;
+	}
+	
+	public static int getNumChar(String text, char ch) {
+		int count = 0;
+		char[] chars = text.toCharArray();
+		for (int i=0; i<chars.length; i++) {
+			if (chars[i] == ch) {
+				count++;
+			}
+		}
+		return count;
+	}
+	
+	public static int getNumWords(String text) {
+		if (text.length() == 0) {
+			return 0;
+		}
+		return getNumChar(text, ' ')+1;
+	}
+	
+	public static int getNumLines(String text) {
+		if (text.length() == 0) {
+			return 0;
+		}
+		return getNumChar(text, '\n')+1;
+	}
+	
 	// Prints the number of instances found for the given regex of one character.
 	// Prints each character with the number of instances for each character, in descending order.
 	public static void printNumInstances(List<File> files, String regex) {

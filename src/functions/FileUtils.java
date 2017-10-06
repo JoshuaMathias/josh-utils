@@ -3,18 +3,24 @@ package functions;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.io.Writer;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Scanner;
 
 public class FileUtils {
 	// If the path is a directory, recursively get a list of all the files.
@@ -77,6 +83,38 @@ public class FileUtils {
 			return writer;
 		}
 		
+		//Get a writer to write line by line.
+		public static BufferedWriter getWriter(OutputStream os) {
+			BufferedWriter writer = null;
+			try {
+				return new BufferedWriter
+					    (new OutputStreamWriter(os,"UTF-8"));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			return writer;
+		}
+		
+		public static void writeFile(String filename, String text) {
+			try {
+				BufferedWriter writer = getWriter(filename);
+				writer.write(text);
+				writer.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		public static void writeFile(OutputStream os, String text) {
+			try {
+				BufferedWriter writer = getWriter(os);
+				writer.write(text);
+				writer.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
 		// Get content of file as one string from an InputStream.
 		public static String readFile(InputStream is) {
 			StringBuilder sb = new StringBuilder(512);
@@ -110,5 +148,59 @@ public class FileUtils {
 				e.printStackTrace();
 				return null;
 			}
+		}
+		
+		// Get text from a resource file
+		public static String readResource(String filename) {
+			return readFile(getResource(filename));
+		}
+		
+		public static InputStream getResource(String resource){
+		    InputStream is ;
+		    //Try with the Thread Context Loader. 
+		    ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+		    if(classLoader != null){
+		        is = classLoader.getResourceAsStream(resource);
+		        if(is != null){
+		            return is;
+		        }
+		    }
+		    //Let's now try with the classloader that loaded this class.
+		    classLoader = FileUtils.class.getClassLoader();
+		    if(classLoader != null){
+		        is = classLoader.getResourceAsStream(resource);
+		        if(is != null){
+		            return is;
+		        }
+		    }
+		    //Last ditch attempt. Get the resource from the classpath.
+		    return ClassLoader.getSystemResourceAsStream(resource);
+		}
+		
+		public static List<String> getFileLines(String filename) {
+			return ParseUtils.splitLines(readFile(filename));
+		}
+		
+		public static List<String> getResourceLines(String filename) {
+			return ParseUtils.splitLines(readResource(filename));
+		}
+		
+		/*
+		 * Get all input as one String, with whitespace.
+		 */
+		public static String readStdIn() {
+			return readFile(System.in);
+		}
+		
+		/*
+		 * Write to standard out. Ensure UTF8
+		 */
+		public static void writeStdOut(String text) {
+			try {
+				System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out), true, "UTF-8"));
+			} catch (UnsupportedEncodingException e) {
+				throw new InternalError("VM does not support mandatory encoding UTF-8");
+			}
+			System.out.println(text);
 		}
 }
