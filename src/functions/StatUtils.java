@@ -6,7 +6,10 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,7 +18,54 @@ import java.util.regex.Pattern;
  * Functions for counting and obtaining statistics or information about text or files.
  */
 public class StatUtils {
+	/*
+	 * Probabilities
+	 */
 	
+	/*
+	 * gramCounts: A List of HashMaps, where each map represents an n-gram.
+	 * Returns a list of map of Ngram probabilities, for each n provided in gramCounts.
+	 */
+	public static List<HashMap<String, Double>> getNGramProbs(List<HashMap<String, Double>> gramCounts) {
+		List<HashMap<String, Double>> gramProbs = new ArrayList<HashMap<String, Double>>();
+		for (int i=0; i<gramCounts.size(); i++) {
+			gramProbs.add(new HashMap<String, Double>());
+		}
+		HashMap<String, Double> firstGram = gramCounts.get(0);
+		double total = getMapTotal(firstGram); // Get total number of tokens.
+		HashMap<String, Double> probsMap = gramProbs.get(0);
+		for (Entry<String, Double> entry : firstGram.entrySet()) {
+			probsMap.put(entry.getKey(), entry.getValue() / total);
+		}
+		for (int n=1; n<gramCounts.size(); n++) {
+			probsMap = gramProbs.get(n);
+			HashMap<String, Double> countsMap = gramCounts.get(n);
+			HashMap<String, Double> previousMap = gramCounts.get(n-1);
+			for (Entry<String, Double> entry : countsMap.entrySet()) {
+				String prevGram = ParseUtils.getNWordsStr(entry.getKey(), n); // Get the previous gram.
+				try {
+					probsMap.put(entry.getKey(), entry.getValue() / previousMap.get(prevGram));
+				} catch (NullPointerException e) {
+					if (!previousMap.containsKey(prevGram)) {
+						System.out.println("Couldn't find previous gram for "+entry.getKey()+": "+prevGram);
+					}
+					e.printStackTrace();
+					System.exit(0);
+				}
+			}
+		}
+		return gramProbs;
+	}
+	
+	/*
+	 * Word and gram counting
+	 */
+	
+	
+	/*
+	 * Returns a map containing each different type of token (key),
+	 * with the number of times it appears in the given text (value).
+	 */
 	public static HashMap<String, Integer> getTokenCounts(String text) {
 		String[] tokens = text.split("\\s");
 		HashMap<String, Integer> tokenCounts = new HashMap<String, Integer>();
@@ -26,10 +76,68 @@ public class StatUtils {
 				count++;
 			}
 		}
-		System.out.println("Number of tokens: "+count);
+//		System.out.println("Number of tokens: "+count);
 		return tokenCounts;
 	}
 	
+	
+	/*
+	 * Returns a List containing a LinkedMap for each n-gram order, from n=1 to n=maxOrder,
+	 * each map containing each distinct n-gram (key) with its count/frequency as its value.
+	 * The entries in the LinkedMap are ordered by count, in ascending order.
+	 */
+	public static List<List<Entry<String, Integer>>> getNGramCounts(String text, int maxOrder) {
+		List<HashMap<String, Integer>> gramCounts = new ArrayList<HashMap<String, Integer>>();
+		for (int i=0; i<maxOrder; i++) {
+			gramCounts.add(new HashMap<String, Integer>());
+		}
+		if (maxOrder > 0) {
+			List<List<String>> lines = ParseUtils.getLinesAsSentences(text);
+			int startI=0;
+			int currentN=0;
+			String gramStr = "";
+			for (int lineI=0; lineI<lines.size(); lineI++) {
+//				System.out.println("lineI: "+lineI);
+				List<String> line = lines.get(lineI);
+				
+				gramStr = "";
+//				System.out.println("gramStr: "+gramStr);
+				for (startI=0; startI<line.size(); startI++) {
+					for (currentN=0; currentN<maxOrder; currentN++) {
+						int endI = startI+currentN;
+						if (endI >= line.size()) {
+							break;
+						}
+						if (currentN == 0) {
+//							if (endI == 0 || endI == line.size()-1) { // Don't include <s> or </s> as unigrams.
+//								continue;
+//							}
+						} else {
+							gramStr += " ";
+						}
+						gramStr += line.get(endI);
+						gramCounts.set(currentN, incrementOne(gramCounts.get(currentN),gramStr));
+					}
+//					System.out.println("gramStr: "+gramStr+" last count: "+gramCounts.get(currentN-2).get(gramStr));
+					gramStr = "";
+				}
+			}
+		}
+		List<List<Entry<String, Integer>>> orderedGramCounts = new ArrayList<List<Entry<String, Integer>>>();
+		for (HashMap<String, Integer> gramMap : gramCounts) {
+			orderedGramCounts.add(sortValues(gramMap));
+		}
+		
+		return orderedGramCounts;
+	}
+	
+	/*
+	 * Character counting
+	 */
+	
+	/*
+	 * Return the number of instances of the given char.
+	 */
 	public static int getNumChar(String text, char ch) {
 		int count = 0;
 		char[] chars = text.toCharArray();
@@ -41,6 +149,9 @@ public class StatUtils {
 		return count;
 	}
 	
+	/*
+	 * Get number of words.
+	 */
 	public static int getNumWords(String text) {
 		if (text.length() == 0) {
 			return 0;
@@ -48,12 +159,19 @@ public class StatUtils {
 		return getNumChar(text, ' ')+1;
 	}
 	
+	/*
+	 * Get number of lines.
+	 */
 	public static int getNumLines(String text) {
 		if (text.length() == 0) {
 			return 0;
 		}
 		return getNumChar(text, '\n')+1;
 	}
+	
+	/*
+	 * Regex counting
+	 */
 	
 	// Prints the number of instances found for the given regex of one character.
 	// Prints each character with the number of instances for each character, in descending order.
@@ -69,9 +187,9 @@ public class StatUtils {
 					instances = incrementOne(instances, ParseUtils.getUnicode(m.group().toCharArray()[0])+" ("+m.group()+")");
 			}
 		}
-		LinkedHashMap<String, Integer> orderedInstances = sortHashMapByValues(instances, false);
-		for (String key : orderedInstances.keySet()) {
-			System.out.println(key+": "+orderedInstances.get(key));
+		List<Entry<String, Integer>> orderedInstances = sortValues(instances, true);
+		for (Entry<String, Integer> entry : orderedInstances) {
+			System.out.println(entry.getKey()+": "+entry.getValue());
 		}
 	}
 	
@@ -112,9 +230,9 @@ public class StatUtils {
 						}
 				}
 			}
-			LinkedHashMap<String, Integer> orderedInstances = sortHashMapByValues(instances, false);
-			for (String key : orderedInstances.keySet()) {
-				System.out.println(key+": "+orderedInstances.get(key));
+			List<Entry<String, Integer>> orderedInstances = sortValues(instances, true);
+			for (Entry<String, Integer> entry : orderedInstances) {
+				System.out.println(entry.getKey()+": "+entry.getValue());
 			}
 //			writer.close();
 //			} catch (IOException e) {
@@ -122,44 +240,171 @@ public class StatUtils {
 //			}
 		}
 		
-
-		//Sorts a HashMap by values and returns a LinkedHashMap.
-		public static LinkedHashMap<String, Integer> sortHashMapByValues(
-		        HashMap<String, Integer> passedMap, boolean ascending) {
-		    List<String> mapKeys = new ArrayList<String>(passedMap.keySet());
-		    List<Integer> mapValues = new ArrayList<Integer>(passedMap.values());
-		    if (ascending) {
-		    	 Collections.sort(mapValues);
-				 Collections.sort(mapKeys);
-		    } else {
-		    	Comparator<String> stringOrder = Collections.reverseOrder();
-		    	Comparator<Integer> intOrder = Collections.reverseOrder();
-		    	Collections.sort(mapValues, intOrder);
-		    	Collections.sort(mapKeys, stringOrder);
-		    }
-
-		    LinkedHashMap<String, Integer> sortedMap =
-		        new LinkedHashMap<String, Integer>();
-
-		    Iterator<Integer> valueIt = mapValues.iterator();
-		    while (valueIt.hasNext()) {
-		        Integer val = valueIt.next();
-		        Iterator<String> keyIt = mapKeys.iterator();
-
-		        while (keyIt.hasNext()) {
-		            String key = keyIt.next();
-		            Integer comp1 = passedMap.get(key);
-		            Integer comp2 = val;
-
-		            if (comp1.equals(comp2)) {
-		                keyIt.remove();
-		                sortedMap.put(key, val);
-		                break;
-		            }
-		        }
-		    }
-		    return sortedMap;
+		/*
+		 * Sorting
+		 */
+		
+		/*
+		 * Sorts a HashMap by keys.
+		 */
+		
+		/*
+		 * Default, sort values descending, then keys ascending
+		 */
+		public static List<Entry<String, Double>> sortValuesThenKeysDouble(Map<String, Double> passedMap) {
+			return sortValuesThenKeysDouble(passedMap, true, false);
 		}
+		
+		/*
+		 * false: ascending (default sorting). true: descending
+		 */
+		public static List<Entry<String, Double>> sortValuesThenKeysDouble(Map<String, Double> passedMap, final boolean reverseVal, final boolean reverseKey) {
+		    List<Entry<String, Double>> mapList = new LinkedList<Entry<String, Double>>(passedMap.entrySet());
+		    Comparator<Entry<String, Double>> entryComparator = new  Comparator<Entry<String, Double>>() {
+		    	public int compare(Entry<String, Double> e1, Entry<String, Double> e2) {
+		    		int valComparison;
+		    		if (reverseVal) {
+		    			valComparison = e2.getValue().compareTo(e1.getValue());
+		    		} else {
+		    			valComparison = e1.getValue().compareTo(e2.getValue());
+		    		}
+		    		if (valComparison == 0) {
+		    			if (reverseKey) {
+		    				return e2.getKey().compareTo(e1.getKey());
+		    			} else {
+		    				return e1.getKey().compareTo(e2.getKey());
+		    			}
+		    		} else {
+		    			return valComparison;
+		    		}
+		    	}
+		    };
+		    
+		    Collections.sort(mapList, entryComparator);
+		    return mapList;
+		}
+		
+		/*
+		 * Default, sort values descending, then keys ascending
+		 */
+		public static List<Entry<String, Integer>> sortValuesThenKeys(Map<String, Integer> passedMap) {
+			return sortValuesThenKeys(passedMap, true, false);
+		}
+		
+		/*
+		 * false: ascending (default sorting). true: descending
+		 */
+		public static List<Entry<String, Integer>> sortValuesThenKeys(Map<String, Integer> passedMap, final boolean reverseVal, final boolean reverseKey) {
+		    List<Entry<String, Integer>> mapList = new LinkedList<Entry<String, Integer>>(passedMap.entrySet());
+		    Comparator<Entry<String, Integer>> entryComparator = new  Comparator<Entry<String, Integer>>() {
+		    	public int compare(Entry<String, Integer> e1, Entry<String, Integer> e2) {
+		    		int valComparison;
+		    		if (reverseVal) {
+		    			valComparison = e2.getValue().compareTo(e1.getValue());
+		    		} else {
+		    			valComparison = e1.getValue().compareTo(e2.getValue());
+		    		}
+		    		if (valComparison == 0) {
+		    			if (reverseKey) {
+		    				return e2.getKey().compareTo(e1.getKey());
+		    			} else {
+		    				return e1.getKey().compareTo(e2.getKey());
+		    			}
+		    		} else {
+		    			return valComparison;
+		    		}
+		    	}
+		    };
+		    
+		    Collections.sort(mapList, entryComparator);
+		    return mapList;
+		}
+		
+		/*
+		 * Sort by keys and return a LinkedList.
+		 */
+		public static List<Entry<String, Integer>> sortKeys(Map<String, Integer> passedMap, final boolean reverse) {
+		    List<Entry<String, Integer>> mapList = new LinkedList<Entry<String, Integer>>(passedMap.entrySet());
+		    Comparator<Entry<String, Integer>> entryComparator = new  Comparator<Entry<String, Integer>>() {
+		    	public int compare(Entry<String, Integer> e1, Entry<String, Integer> e2) {
+		    		if (reverse) {
+		    			return e2.getKey().compareTo(e1.getKey());
+		    		}
+		    		return e1.getKey().compareTo(e2.getKey());
+		    	}
+		    };
+		    
+		    Collections.sort(mapList, entryComparator);
+		    return mapList;
+		}
+		
+		/*
+		 * Sort by keys and return a LinkedList.
+		 */
+		public static List<Entry<String, Double>> sortKeysDouble(Map<String, Double> passedMap, final boolean reverse) {
+		    List<Entry<String, Double>> mapList = new LinkedList<Entry<String, Double>>(passedMap.entrySet());
+		    Comparator<Entry<String, Double>> entryComparator = new  Comparator<Entry<String, Double>>() {
+		    	public int compare(Entry<String, Double> e1, Entry<String, Double> e2) {
+		    		if (reverse) {
+		    			return e2.getKey().compareTo(e1.getKey());
+		    		}
+		    		return e1.getKey().compareTo(e2.getKey());
+		    	}
+		    };
+		    
+		    Collections.sort(mapList, entryComparator);
+		    return mapList;
+		}
+		
+		public static List<Entry<String, Integer>> sortValues(Map<String, Integer> passedMap) {
+			return sortValues(passedMap, true);
+		}
+
+		// Sorts a HashMap by values and returns a LinkedList.
+		// Ascending by default
+		// If reverse is true, entries with greater values, or the opposite of the normal ordering, will be first (descending).
+		public static List<Entry<String, Integer>> sortValues(
+		        Map<String, Integer> passedMap, final boolean reverse) {
+		    List<Entry<String, Integer>> mapList = new LinkedList<Entry<String, Integer>>(passedMap.entrySet());
+		    Comparator<Entry<String, Integer>> entryComparator = new  Comparator<Entry<String, Integer>>() {
+		    	public int compare(Entry<String, Integer> e1, Entry<String, Integer> e2) {
+		    		if (reverse) {
+		    			return e2.getValue().compareTo(e1.getValue());
+		    		}
+		    		return e1.getValue().compareTo(e2.getValue());
+		    	}
+		    };
+		    
+		    Collections.sort(mapList, entryComparator);
+		    return mapList;
+		}
+		
+		public static List<Entry<String, Double>> sortValuesDouble(Map<String, Double> passedMap) {
+			return sortValuesDouble(passedMap, true);
+		}
+
+		// Sorts a HashMap by values and returns a LinkedList.
+		// Ascending by default
+		// If reverse is true, entries with greater values, or the opposite of the normal ordering, will be first (descending).
+		public static List<Entry<String, Double>> sortValuesDouble(
+		        Map<String, Double> passedMap, final boolean reverse) {
+		    List<Entry<String, Double>> mapList = new LinkedList<Entry<String, Double>>(passedMap.entrySet());
+		    Comparator<Entry<String, Double>> entryComparator = new  Comparator<Entry<String, Double>>() {
+		    	public int compare(Entry<String, Double> e1, Entry<String, Double> e2) {
+		    		if (reverse) {
+		    			return e2.getValue().compareTo(e1.getValue());
+		    		}
+		    		return e1.getValue().compareTo(e2.getValue());
+		    	}
+		    };
+		    
+		    Collections.sort(mapList, entryComparator);
+		    return mapList;
+		}
+		
+		/*
+		 * Adding counts
+		 */
 		
 		//Increment the count of a specific key of a map within a map, whether it already exists or not.
 		public static HashMap<String, HashMap<String, Integer>> incrementOneMap(HashMap<String, HashMap<String, Integer>> map, String key, String innerKey) {
@@ -227,5 +472,16 @@ public class StatUtils {
 			}
 			map.put(id, totalFreq);
 			return map;
+		}
+		
+		/*
+		 * Totals
+		 */
+		public static Double getMapTotal(Map<String, Double> map) {
+			double total = 0;
+			for (Entry<String, Double> entry : map.entrySet()) {
+				total += entry.getValue();
+			}
+			return total;
 		}
 }

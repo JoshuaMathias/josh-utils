@@ -3,6 +3,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,27 +29,6 @@ public class CleanUtils {
 		text = text.replaceAll("[\\u000A\\u000D\u0085\u000B\u000C\u2028\u2029]", "\n");
 		return text;
 	}
-	
-	/* Prints the number of instances found for the given regex of one character.
-	 *  Prints each character with the number of instances for each character, in descending order.
-	 */
-	public static void printNumInstances(List<File> files, String regex) {
-		System.out.println(regex+"\n");
-		Pattern p = Pattern.compile(regex);
-		HashMap<String, Integer> instances = new HashMap<String, Integer>();
-		for (File file : files) {
-			String text = FileUtils.readFile(file.getAbsolutePath());
-			Matcher m = p.matcher(text);
-			while (m.find()) {
-					instances = StatUtils.incrementOne(instances, ParseUtils.getUnicode(m.group().toCharArray()[0])+" ("+m.group()+")");
-			}
-		}
-		LinkedHashMap<String, Integer> orderedInstances = StatUtils.sortHashMapByValues(instances, false);
-		for (String key : orderedInstances.keySet()) {
-			System.out.println(key+": "+orderedInstances.get(key));
-		}
-	}
-	
 	
 	
 	// Removes blank lines and replaces all whitespace with a single space.

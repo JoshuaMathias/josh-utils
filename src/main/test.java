@@ -18,11 +18,10 @@ public class test {
 			filename = args[0];
 			origText = FileUtils.readFile(filename);
 		}
-		System.out.println("Getting num lines");
 //		System.out.println("orig text lines: "+StatUtils.getNumLines(origText));
 		
 		String tokText = tokenizer.tokenize(origText);
 //		System.out.println("tok text lines: "+StatUtils.getNumLines(tokText));
-		FileUtils.writeFile(filename+".tok.test", tokText);
+		FileUtils.writeFile(filename+".tok", tokText);
 	}
 }

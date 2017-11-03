@@ -150,6 +150,10 @@ public class FileUtils {
 			}
 		}
 		
+		public static List<String> readLines(String filename) {
+			return ParseUtils.splitLines(readFile(filename));
+		}
+		
 		// Get text from a resource file
 		public static String readResource(String filename) {
 			return readFile(getResource(filename));
