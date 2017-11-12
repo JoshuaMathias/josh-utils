@@ -16,7 +16,7 @@ public class Vocab {
 		}
 		String text = "";
 		if (inFile == null) {
-			text = FileUtils.readStdIn();
+			text = FileUtils.readIn();
 		} else {
 			text = FileUtils.readFile(inFile);
 		}

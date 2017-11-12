@@ -32,7 +32,7 @@ public class StatUtils {
 			gramProbs.add(new HashMap<String, Double>());
 		}
 		HashMap<String, Double> firstGram = gramCounts.get(0);
-		double total = getMapTotal(firstGram); // Get total number of tokens.
+		double total = getMapTotalDouble(firstGram); // Get total number of tokens.
 		HashMap<String, Double> probsMap = gramProbs.get(0);
 		for (Entry<String, Double> entry : firstGram.entrySet()) {
 			probsMap.put(entry.getKey(), entry.getValue() / total);
@@ -56,6 +56,45 @@ public class StatUtils {
 		}
 		return gramProbs;
 	}
+	
+	/*
+	 * gramCounts: A List of HashMaps, where each map represents an n-gram.
+	 * Returns a list of map of Ngram probabilities, for each n provided in gramCounts.
+	 */
+	public static List<Map<String, Double>> getNGramTagProbs(List<Map<String, Double>> gramCounts) {
+		List<Map<String, Double>> gramProbs = new ArrayList<Map<String, Double>>();
+		for (int i=0; i<gramCounts.size(); i++) {
+			gramProbs.add(new HashMap<String, Double>());
+		}
+		Map<String, Double> firstGram = gramCounts.get(0);
+		double total = getMapTotalDouble(firstGram); // Get total number of tokens.
+		Map<String, Double> probsMap = gramProbs.get(0);
+		for (Entry<String, Double> entry : firstGram.entrySet()) {
+			probsMap.put(entry.getKey(), entry.getValue() / total);
+		}
+		for (int n=1; n<gramCounts.size(); n++) {
+			probsMap = gramProbs.get(n);
+			Map<String, Double> countsMap = gramCounts.get(n);
+			Map<String, Double> previousMap = gramCounts.get(n-1);
+			for (Entry<String, Double> entry : countsMap.entrySet()) {
+				String prevGram = ParseUtils.getUntilNChar(entry.getKey(), '_', n); // Get the previous gram.
+				try {
+//					if (prevGram.contains("EOS")) {
+//						System.out.println("entry key: "+entry.getKey()+" entry value: "+entry.getValue()+" prevGram: "+prevGram+" prevValue: "+previousMap.get(prevGram));
+//					}
+					probsMap.put(entry.getKey(), entry.getValue() / previousMap.get(prevGram));
+				} catch (NullPointerException e) {
+					if (!previousMap.containsKey(prevGram)) {
+						System.out.println("Couldn't find previous gram for "+entry.getKey()+": "+prevGram);
+					}
+					e.printStackTrace();
+					System.exit(0);
+				}
+			}
+		}
+		return gramProbs;
+	}
+	
 	
 	/*
 	 * Word and gram counting
@@ -82,12 +121,12 @@ public class StatUtils {
 	
 	
 	/*
-	 * Returns a List containing a LinkedMap for each n-gram order, from n=1 to n=maxOrder,
+	 * Returns a List containing a List for each n-gram order, from n=1 to n=maxOrder,
 	 * each map containing each distinct n-gram (key) with its count/frequency as its value.
 	 * The entries in the LinkedMap are ordered by count, in ascending order.
 	 */
 	public static List<List<Entry<String, Integer>>> getNGramCounts(String text, int maxOrder) {
-		List<HashMap<String, Integer>> gramCounts = new ArrayList<HashMap<String, Integer>>();
+		List<Map<String, Integer>> gramCounts = new ArrayList<Map<String, Integer>>();
 		for (int i=0; i<maxOrder; i++) {
 			gramCounts.add(new HashMap<String, Integer>());
 		}
@@ -124,7 +163,7 @@ public class StatUtils {
 			}
 		}
 		List<List<Entry<String, Integer>>> orderedGramCounts = new ArrayList<List<Entry<String, Integer>>>();
-		for (HashMap<String, Integer> gramMap : gramCounts) {
+		for (Map<String, Integer> gramMap : gramCounts) {
 			orderedGramCounts.add(sortValues(gramMap));
 		}
 		
@@ -179,7 +218,7 @@ public class StatUtils {
 //		Pattern p = Pattern.compile("[\\t\\f\\r\\x0B\u0020\u00A0\u1680\u180E\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u200B\u202F\u205F\u3000\uFEFF]");  // insert your pattern here
 		System.out.println(regex+"\n");
 		Pattern p = Pattern.compile(regex);
-		HashMap<String, Integer> instances = new HashMap<String, Integer>();
+		Map<String, Integer> instances = new HashMap<String, Integer>();
 		for (File file : files) {
 			String fileStr = FileUtils.readFile(file.getAbsolutePath());
 			Matcher m = p.matcher(fileStr);
@@ -210,7 +249,7 @@ public class StatUtils {
 //				writer.write("Pattern: "+regCategory+"\n");
 				patterns.add(Pattern.compile(regCategory));
 			}
-			HashMap<String, Integer> instances = new HashMap<String, Integer>();
+			Map<String, Integer> instances = new HashMap<String, Integer>();
 			for (File file : files) {
 				String fileStr = CleanUtils.rmBlankSpace(FileUtils.readFile(file.getAbsolutePath()));
 				Matcher m = regexPattern.matcher(fileStr);
@@ -407,8 +446,8 @@ public class StatUtils {
 		 */
 		
 		//Increment the count of a specific key of a map within a map, whether it already exists or not.
-		public static HashMap<String, HashMap<String, Integer>> incrementOneMap(HashMap<String, HashMap<String, Integer>> map, String key, String innerKey) {
-			HashMap<String, Integer> innerMap = null;
+		public static Map<String, Map<String, Integer>> incrementOneMap(Map<String, Map<String, Integer>> map, String key, String innerKey) {
+			Map<String, Integer> innerMap = null;
 			if (!map.containsKey(key)) {
 				innerMap = new HashMap<String, Integer>();
 			} else {
@@ -434,7 +473,7 @@ public class StatUtils {
 		}
 		
 		//Increment the count of a specific key of a map, whether it already exists or not.
-		public static HashMap<String, Integer> incrementOne(HashMap<String, Integer> map,
+		public static Map<String, Integer> incrementOne(Map<String, Integer> map,
 				String id) {
 			Integer totalFreq = 0;
 			if (!map.containsKey(id)) {
@@ -448,8 +487,8 @@ public class StatUtils {
 		}
 		
 		//Increment the count (Double) of a specific key of a map within a map, whether it already exists or not.
-		public static HashMap<String, HashMap<String, Double>> incrementDoubleMap(HashMap<String, HashMap<String, Double>> map, String key, String innerKey) {
-			HashMap<String, Double> innerMap = null;
+		public static Map<String, Map<String, Double>> incrementDoubleMap(Map<String, Map<String, Double>> map, String key, String innerKey) {
+			Map<String, Double> innerMap = null;
 			if (!map.containsKey(key)) {
 				innerMap = new HashMap<String, Double>();
 			} else {
@@ -461,7 +500,7 @@ public class StatUtils {
 		}
 		
 		//Increment the count (Double) of a specific key of a map, whether it already exists or not.
-		public static HashMap<String, Double> incrementDouble(HashMap<String, Double> map,
+		public static Map<String, Double> incrementDouble(Map<String, Double> map,
 				String id) {
 			Double totalFreq = 0.0;
 			if (!map.containsKey(id)) {
@@ -477,10 +516,45 @@ public class StatUtils {
 		/*
 		 * Totals
 		 */
-		public static Double getMapTotal(Map<String, Double> map) {
+		public static Double getMapTotalDouble(Map<String, Double> map) {
 			double total = 0;
 			for (Entry<String, Double> entry : map.entrySet()) {
 				total += entry.getValue();
+			}
+			return total;
+		}
+		
+		public static Integer getMapTotal(Map<String, Integer> map) {
+			int total = 0;
+			for (Entry<String, Integer> entry : map.entrySet()) {
+				total += entry.getValue();
+			}
+			return total;
+		}
+		
+		
+		public static Map<String, Double> divideByTotal(Map<String, Integer> map) {
+			double total = getMapTotal(map);
+			Map<String, Double> normalizedMap = new HashMap<String, Double>();
+			for (Entry<String, Integer> entry : map.entrySet()) {
+				normalizedMap.put(entry.getKey(), entry.getValue()/total);
+			}
+			return normalizedMap;
+		}
+		
+		// Returns the input map, with each item normalized by the total.
+		public static Map<String, Double> divideByTotalDouble(Map<String, Double> map) {
+			double total = getMapTotalDouble(map);
+			for (Entry<String, Double> entry : map.entrySet()) {
+				map.put(entry.getKey(), entry.getValue()/total);
+			}
+			return map;
+		}
+		
+		public static Integer getTotalElementsDouble(Map<String, Map<String, Double>> map) {
+			int total=0;
+			for (Entry<String, Map<String, Double>> entry : map.entrySet()) {
+				total+=entry.getValue().size();
 			}
 			return total;
 		}

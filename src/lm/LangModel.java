@@ -34,13 +34,13 @@ public class LangModel {
 		}
 		lineI++; // Skip line with '\1-grams:'
 		for (; lineI<lines.size(); lineI++) {
-			List<String> tokens = ParseUtils.splitSpaces(lines.get(lineI));
+			List<String> tokens = ParseUtils.splitTabs(lines.get(lineI));
 			if (tokens.size() > 3) {
 				Double prob = Double.valueOf(tokens.get(1));
 				String gramStr = tokens.get(3);
-				for (int tokenI=4; tokenI<tokens.size(); tokenI++) {
-					gramStr += " "+tokens.get(tokenI);
-				}
+//				for (int tokenI=4; tokenI<tokens.size(); tokenI++) {
+//					gramStr += " "+tokens.get(tokenI);
+//				}
 //				if (gramStr.equals(", they")) {
 //					System.out.println(tokens);
 //					System.out.println("gramStr: "+gramStr+" => "+prob);
@@ -155,7 +155,7 @@ public class LangModel {
 		int maxOrder = gramCounts.size();
 		// Write count summary at beginning of file. e.g. ngram 1: type=5171 token=25551
 		for (int n=0; n<maxOrder; n++) {
-			int tokenCount = StatUtils.getMapTotal(gramCounts.get(n)).intValue();
+			int tokenCount = StatUtils.getMapTotalDouble(gramCounts.get(n)).intValue();
 			int typeCount = gramCounts.get(n).size();
 			lmStr.append("ngram "+(n+1)+": type="+typeCount+" token="+tokenCount+"\n");
 		}
@@ -178,7 +178,7 @@ public class LangModel {
 				} else {
 					formattedProb = String.format("%.17f",prob);
 				}
-				lmStr.append(countsMap.get(gramStr).intValue()+" "+formattedProb+" "+Math.log10(prob)+" "+gramStr+"\n");
+				lmStr.append(countsMap.get(gramStr).intValue()+"\t"+formattedProb+"\t"+Math.log10(prob)+"\t"+gramStr+"\n");
 			}
 		}
 		lmStr.append("\n\\end\\\n");

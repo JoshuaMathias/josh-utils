@@ -192,7 +192,7 @@ public class FileUtils {
 		/*
 		 * Get all input as one String, with whitespace.
 		 */
-		public static String readStdIn() {
+		public static String readIn() {
 			return readFile(System.in);
 		}
 		

@@ -144,7 +144,7 @@ public class ParseUtils {
 	/*
 	 * Get a list of all words separated by whitespace
 	 */
-	public static List<String> splitSpace(String text) {
+	public static List<String> splitWhitespace(String text) {
 		if (sb == null) {
 			sb = new StringBuilder();
 		}
@@ -162,6 +162,31 @@ public class ParseUtils {
 		}
 		sb.setLength(0);
 		return words;
+	}
+	
+	/*
+	 * Get an array with two elements, split by the last instance of the given character.
+	 */
+	public static String[] splitLastChar(String text, char ch) {
+		char[] chars = text.toCharArray();
+		String[] splitText = null;
+		for (int i=chars.length-1; i>=0; i--) {
+			if (chars[i] == ch) {
+				splitText = new String[2];
+				splitText[0]=text.substring(0,i);
+				if (chars.length>i+1) {
+					splitText[1]=text.substring(i+1);
+				} else {
+					splitText[1]="";
+				}
+				break;
+			}
+		}
+//		System.out.println("splitText: "+splitText[0]+" "+splitText[1]);
+		if (splitText == null) {
+			return new String[]{text};
+		}
+		return splitText;
 	}
 	
 	
@@ -238,9 +263,87 @@ public class ParseUtils {
 				sb.append(chars[i]);
 			}
 		}
+		if (sb.length() > 0) {
+			if (sb.length() > 0) {
+				words.add(sb.toString());
+			}
+			sb.setLength(0);
+		}
+		if (words.size() > 1) {
+//			System.out.println("Adding line: "+words);
+			words.add("</s>");
+			lines.add(words);
+		}
 		sb.setLength(0);
 		return lines;
 	}
+	
+	/*
+	 *  Get a list of lines represented by a list of words in each line.
+	 *  Doesn't include empty lines.
+	 *  Add <s> at the beginning of each line and </s> at the end of each line.
+	 */
+	public static List<List<String[]>> getLinesAsPOSSentences(String text) {
+		StringBuilder sentenceSB = new StringBuilder();
+		char[] chars;
+		chars = text.toCharArray();
+		List<List<String[]>> lines = new ArrayList<List<String[]>>();
+		List<String[]> words = new ArrayList<String[]>();
+		words.add(new String[] {"<s>","BOS"});
+		for (int i=0; i<chars.length; i++) {
+			if (chars[i] == '\n' || chars[i] == '\r') {
+				if (sentenceSB.length() > 0) {
+//					System.out.println("Adding word: "+sentenceSB.toString());
+					String word = sentenceSB.toString();
+					String[] splitWord = splitLastChar(word, '/');
+					if (splitWord.length > 1) {
+						splitWord[0] = escapeChar(splitWord[0], '/');
+						words.add(splitWord);
+					}
+				}
+				if (words.size() > 1) {
+//					System.out.println("Adding line: "+words);
+					words.add(new String[] {"</s>","EOS"});
+					lines.add(words);
+				}
+				words = new ArrayList<String[]>();
+				words.add(new String[] {"<s>","BOS"});
+				sentenceSB.setLength(0);
+			} else if (chars[i] == ' ') {
+				if (sentenceSB.length() > 0) {
+					String word = sentenceSB.toString();
+					String[] splitWord = splitLastChar(word, '/');
+					if (splitWord.length > 1) {
+						splitWord[0] = escapeChar(splitWord[0], '/');
+						words.add(splitWord);
+					}
+				}
+				sentenceSB.setLength(0);
+			} else {
+				sentenceSB.append(chars[i]);
+			}
+		}
+		if (sentenceSB.length() > 0) {
+			String word = sentenceSB.toString();
+			String[] splitWord = splitLastChar(word, '/');
+			if (splitWord.length > 1) {
+				splitWord[0] = escapeChar(splitWord[0], '/');
+				words.add(splitWord);
+			}
+		}
+		if (words.size() > 1) {
+			words.add(new String[] {"</s>","EOS"});
+//			System.out.print("Adding line: ");
+//			for (String[] token : words) {
+//				System.out.print("("+token[0]+","+token[1]+")"+" ");
+//			}
+//			System.out.println();
+			lines.add(words);
+		}
+		sentenceSB.setLength(0);
+		return lines;
+	}
+	
 	
 	/*
 	 * Encoding
@@ -252,6 +355,28 @@ public class ParseUtils {
 		return "\\u" + Integer.toHexString(ch | 0x10000).substring(1);
 	}
 	
+	/*
+	 * Escaping
+	 */
+	// Puts '\' before every instance of a given character in the given text.
+	public static String escapeChar(String text, char ch) {
+		if (sb == null) {
+			sb = new StringBuilder();
+		}
+		char[] chars = text.toCharArray();
+		if (sb == null) {
+			sb = new StringBuilder();
+		}
+		for (int i=0; i<chars.length; i++) {
+			if (chars[i] == ch) {
+				sb.append('\\'); // Escape the character
+			}
+			sb.append(chars[i]);
+		}
+		String newText = sb.toString();
+		sb.setLength(0);
+		return newText;
+	}
 	
 	/*
 	 * Trimming
@@ -321,7 +446,27 @@ public class ParseUtils {
 	public static String mapToStringDouble(Map<String, Double> map) {
 		StringBuilder mapStr = new StringBuilder();
 		for (Entry<String, Double> entry : map.entrySet()) {
-			mapStr.append(entry.getValue()+"\t"+entry.getKey()+"\n");
+			mapStr.append(entry.getKey()+"\t"+entry.getValue()+"\n");
+		}
+		return mapStr.toString();
+	}
+	
+	public static String mapToString2D(Map<String, Map<String, Integer>> map) {
+		StringBuilder mapStr = new StringBuilder();
+		for (Map<String, Integer> entryMap : map.values()) {
+			for (Entry<String, Integer> entry : entryMap.entrySet()) {
+				mapStr.append(entry.getKey()+"\t"+entry.getValue()+"\n");
+			}
+		}
+		return mapStr.toString();
+	}
+	
+	public static String mapToStringDouble2D(Map<String, Map<String, Double>> map) {
+		StringBuilder mapStr = new StringBuilder();
+		for (Entry<String, Map<String, Double>> entryMap : map.entrySet()) {
+			for (Entry<String, Double> entry : entryMap.getValue().entrySet()) {
+				mapStr.append(entryMap.getKey()+"\t"+entry.getKey()+"\t"+entry.getValue()+"\n");
+			}
 		}
 		return mapStr.toString();
 	}
