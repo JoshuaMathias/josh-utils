@@ -20,8 +20,12 @@ public class BigramTagger {
 			System.exit(0);
 		}
 		
-//		String training_str = FileUtils.readIn();
-		String training_str = FileUtils.readFile(args[1]);
+		String training_str = "";
+		if (args.length > 1) {
+			training_str = FileUtils.readFile(args[1]);
+		} else {
+			training_str = FileUtils.readIn();
+		}
 		HMM hmm = new HMM(training_str, 2);
 		FileUtils.writeFile(output_hmm_file, hmm.toString());
 		

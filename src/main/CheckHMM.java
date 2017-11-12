@@ -1,0 +1,28 @@
+package main;
+
+import lm.HMM;
+import functions.FileUtils;
+
+public class CheckHMM {
+
+	/**
+	 * Takes a training file with POS tags and outputs an HMM according to a specific format.
+	 * @param args
+	 * USAGE: output_hmm
+	 * Training data is received from standard in.
+	 */
+	public static void main(String[] args) {
+		String input_hmm_file = "";
+		if (args.length > 0) {
+			input_hmm_file = args[0];
+		} else {
+			System.out.println("USAGE: input_hmm");
+			System.exit(0);
+		}
+		
+
+		HMM hmm = new HMM(input_hmm_file);
+		
+	}
+
+}

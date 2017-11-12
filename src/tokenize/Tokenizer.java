@@ -227,7 +227,7 @@ public class Tokenizer {
 		}
 		Tokenizer tokenizer = new Tokenizer(abbrevFile);
 
-		String origText = FileUtils.readStdIn();
+		String origText = FileUtils.readIn();
 		
 		String tokText = tokenizer.tokenize(origText);
 		System.out.println(tokText);

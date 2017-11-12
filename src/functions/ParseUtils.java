@@ -303,7 +303,7 @@ public class ParseUtils {
 				}
 				if (words.size() > 1) {
 //					System.out.println("Adding line: "+words);
-					words.add(new String[] {"</s>","EOS"});
+					words.add(new String[] {"<\\/s>","EOS"});
 					lines.add(words);
 				}
 				words = new ArrayList<String[]>();
@@ -332,7 +332,7 @@ public class ParseUtils {
 			}
 		}
 		if (words.size() > 1) {
-			words.add(new String[] {"</s>","EOS"});
+			words.add(new String[] {"<\\/s>","EOS"});
 //			System.out.print("Adding line: ");
 //			for (String[] token : words) {
 //				System.out.print("("+token[0]+","+token[1]+")"+" ");
