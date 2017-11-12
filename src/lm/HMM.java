@@ -2,10 +2,12 @@ package lm;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import functions.FileUtils;
 import functions.ParseUtils;
@@ -31,7 +33,8 @@ public class HMM {
 	Map<String, Map<String, Double>> symbols; // Key: state_str. Value: Map: Key: symbol. Value: prob.
 	List<String> tags; // List of every possible tag.
 	Map<String, Double> trigrams;
-	List<String> states;
+	Set<String> states;
+	Set<String> tokens;
 	
 	List<Map<String, Double>> gramCounts; // Counts for each gram of POS tags.
 	Map<String, Map<String, Integer>> symbolCounts; // Counts for the symbols of each tag. Key: tag. Value: Map: Key: symbol. Value: prob.
@@ -77,14 +80,19 @@ public class HMM {
 			trans_line_num = Integer.parseInt(ParseUtils.splitChar(hmmLines.get(3),'=').get(1));
 			emiss_line_num = Integer.parseInt(ParseUtils.splitChar(hmmLines.get(4),'=').get(1));
 		}
-		for (String line : hmmLines) {
-			if (line.contains("\\init")) {
+		int lineI = 5;
+		for (; lineI<hmmLines.size(); lineI++) {
+			if (hmmLines.get(lineI).contains("\\init")) {
 				break;
 			}
 		}
+		lineI++;
 		
+		initials = new HashMap<String, Double>();
 		int initLineCount = 0;
-		for (String line : hmmLines) {
+		String line = "";
+		for (; lineI<hmmLines.size(); lineI++) {
+			line = hmmLines.get(lineI);
 			if (line.contains("\\transition")) {
 				break;
 			}
@@ -94,10 +102,13 @@ public class HMM {
 				initials.put(splitLine[0], Double.parseDouble(splitLine[1]));
 			}
 		}
+		lineI++;
 
-		
+		trigrams = new HashMap<String, Double>();
+		states = new HashSet<String>();
 		int transLineCount = 0;
-		for (String line : hmmLines) {
+		for (; lineI<hmmLines.size(); lineI++) {
+			line = hmmLines.get(lineI);
 			if (line.contains("\\emission")) {
 				break;
 			}
@@ -105,9 +116,65 @@ public class HMM {
 			String[] splitLine = line.split("\\s");
 			if (splitLine.length > 2) {
 				states.add(splitLine[1]);
-				String trigram = splitLine[0]+ParseUtils.splitChar(splitLine[1],'_').get(1);
-				trigrams.put(trigram, Double.parseDouble(splitLine[2]));
+				if (ParseUtils.splitChar(splitLine[1],'_').size() > 1) {
+					String trigram = splitLine[0]+ParseUtils.splitChar(splitLine[1],'_').get(1);
+					trigrams.put(trigram, Double.parseDouble(splitLine[2]));
+				}
 			}
+		}
+		lineI++;
+		
+		symbols = new HashMap<String, Map<String, Double>>();
+		tokens = new HashSet<String>();
+		int emisLineCount = 0;
+		for (; lineI<hmmLines.size(); lineI++) {
+			line = hmmLines.get(lineI);
+			emisLineCount++;
+			String[] splitLine = line.split("\\s");
+			if (splitLine.length > 2) {
+				states.add(splitLine[1]);
+//				String symbols = splitLine[0]+ParseUtils.splitChar(splitLine[1],'_').get(1);
+				Map<String, Double> posMap;
+				if (symbols.containsKey(splitLine[0])) {
+					posMap = symbols.get(splitLine[0]);
+				} else {
+					posMap = new HashMap<String, Double>();
+				}
+				posMap.put(splitLine[1], Double.parseDouble(splitLine[2]));
+			
+				symbols.put(splitLine[0],posMap);
+				tokens.add(splitLine[1]);
+			}
+		}
+		
+		if (state_num != states.size()) {
+			System.out.println("warning: different numbers of state_num: claimed="+state_num+", real="+states.size());
+		} else {
+			System.out.println("state_num="+state_num);
+		}
+		
+		if (sym_num != tokens.size()) {
+			System.out.println("warning: different numbers of sym_num: claimed="+sym_num+", real="+tokens.size());
+		} else {
+			System.out.println("sym_num="+sym_num);
+		}
+		
+		if (init_line_num != initLineCount) {
+			System.out.println("warning: different numbers of init_line_num: claimed="+init_line_num+", real="+initLineCount);
+		} else {
+			System.out.println("init_line_num="+init_line_num);
+		}
+		
+		if (trans_line_num != transLineCount) {
+			System.out.println("warning: different numbers of trans_line_num: claimed="+trans_line_num+", real="+transLineCount);
+		} else {
+			System.out.println("trans_line_num="+trans_line_num);
+		}
+		
+		if (emiss_line_num != emisLineCount) {
+			System.out.println("warning: different numbers of emiss_line_num: claimed="+emiss_line_num+", real="+emisLineCount);
+		} else {
+			System.out.println("emiss_line_num="+emiss_line_num);
 		}
 	}
 	
@@ -316,8 +383,8 @@ public class HMM {
 	
 	@Override
 	public String toString() {
-		state_num = (int) Math.pow(tags.size(),maxOrder-1);
-		sym_num = symbols.size();
+		state_num = (int) Math.pow(tags.size()+1,maxOrder-1);
+		sym_num = symbols.size()+1; //+1 for <unk>
 		init_line_num = initials.size();
 		if (maxOrder == 2) {
 			emiss_line_num = StatUtils.getTotalElementsDouble(symbols);
