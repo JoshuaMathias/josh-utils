@@ -1,6 +1,7 @@
 package functions;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -558,4 +559,34 @@ public class StatUtils {
 			}
 			return total;
 		}
-}
+		
+		/*
+		 * Comparison
+		 */
+		
+		// Compare two doubles for equality by checking whether the difference between the two doubles is less than a small number.
+		public static boolean equalsDouble(double d1, double d2) {
+			if (Math.abs(d2-d1) < .000001) {
+				return true;
+			}
+			return false;
+		}
+		
+		/*
+		 * Arrays
+		 */
+		
+		public static int[][] fillArray(int[][] arr, int val) {
+			for (int i=0; i<arr.length; i++) {
+				Arrays.fill(arr[i], val);
+			}
+			return arr;
+		}
+		
+		public static double[][] fillArrayDouble(double[][] arr, double val) {
+			for (int i=0; i<arr.length; i++) {
+				Arrays.fill(arr[i], val);
+			}
+			return arr;
+		}
+ }

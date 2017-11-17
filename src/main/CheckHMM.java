@@ -6,10 +6,9 @@ import functions.FileUtils;
 public class CheckHMM {
 
 	/**
-	 * Takes a training file with POS tags and outputs an HMM according to a specific format.
+	 * Takes an HMM according to a specific format.
 	 * @param args
-	 * USAGE: output_hmm
-	 * Training data is received from standard in.
+	 * USAGE: input_hmm
 	 */
 	public static void main(String[] args) {
 		String input_hmm_file = "";

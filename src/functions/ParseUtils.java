@@ -61,8 +61,8 @@ public class ParseUtils {
 				if (sb.length() > 0) {
 //					System.out.println("Adding token "+sb.toString());
 					tokens.add(sb.toString());
+					sb.setLength(0);
 				}
-				sb.setLength(0);
 			} else {
 				sb.append(chars[i]);
 			}
@@ -229,6 +229,45 @@ public class ParseUtils {
 	/*
 	 *  Get a list of lines represented by a list of words in each line.
 	 *  Doesn't include empty lines.
+	 *  Split by whitespace
+	 */
+	public static List<List<String>> splitLinesWhitespace(String text) {
+		if (sb == null) {
+			sb = new StringBuilder();
+		}
+		char[] chars = text.toCharArray();
+		List<List<String>> lines = new ArrayList<List<String>>();
+		List<String> words = new ArrayList<String>();
+		for (int i=0; i<chars.length; i++) {
+			if (chars[i] == '\n' || chars[i] == '\r') {
+				if (sb.length() > 0) {
+//					System.out.println("Adding word: "+sb.toString());
+					words.add(sb.toString());
+				}
+				if (words.size() > 0) {
+//					System.out.println("Adding line: "+words);
+					lines.add(words);
+				}
+				words = new ArrayList<String>();
+				sb.setLength(0);
+			} else if (Character.isWhitespace(chars[i]) || chars[i] == ' ') {
+				if (sb.length() > 0) {
+//					System.out.println("Adding word: "+sb.toString());
+					words.add(sb.toString());
+				}
+				sb.setLength(0);
+			} else {
+				sb.append(chars[i]);
+			}
+		}
+		sb.setLength(0);
+		return lines;
+	}
+	
+	
+	/*
+	 *  Get a list of lines represented by a list of words in each line.
+	 *  Doesn't include empty lines.
 	 *  Add <s> at the beginning of each line and </s> at the end of each line.
 	 */
 	public static List<List<String>> getLinesAsSentences(String text) {
@@ -367,11 +406,15 @@ public class ParseUtils {
 		if (sb == null) {
 			sb = new StringBuilder();
 		}
+		char prevCh = 0;
 		for (int i=0; i<chars.length; i++) {
 			if (chars[i] == ch) {
-				sb.append('\\'); // Escape the character
+				if (prevCh != '\\') { // Only escape if the character isn't already escaped.
+					sb.append('\\'); // Escape the character
+				}
 			}
 			sb.append(chars[i]);
+			prevCh = chars[i];
 		}
 		String newText = sb.toString();
 		sb.setLength(0);

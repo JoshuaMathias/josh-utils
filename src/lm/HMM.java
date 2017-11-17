@@ -1,6 +1,7 @@
 package lm;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -32,9 +33,17 @@ public class HMM {
 	List<Map<String, Double>> transitions; // Key: From_state. Value: Map: Key: to_state. Value: prob.
 	Map<String, Map<String, Double>> symbols; // Key: state_str. Value: Map: Key: symbol. Value: prob.
 	List<String> tags; // List of every possible tag.
-	Map<String, Double> trigrams;
+	Map<String, Double> gramProbs;
 	Set<String> states;
 	Set<String> tokens;
+	HashMap<String, Integer> stateToIndex;
+	String[] indexToState;
+	HashMap<String, Integer> symbolToIndex;
+	String[] indexToSymbol;
+	double[][] stateGraph;
+	double[][] stateSymbols;
+	double[] initialProbs;
+	List<Integer> initialIndices;
 	
 	List<Map<String, Double>> gramCounts; // Counts for each gram of POS tags.
 	Map<String, Map<String, Integer>> symbolCounts; // Counts for the symbols of each tag. Key: tag. Value: Map: Key: symbol. Value: prob.
@@ -72,110 +81,408 @@ public class HMM {
 	}
 	
 	public HMM(String hmm_file) {
-		List<String> hmmLines = FileUtils.readLines(hmm_file);
-		if (hmmLines.size() > 4) {
-			state_num = Integer.parseInt(ParseUtils.splitChar(hmmLines.get(0),'=').get(1));
-			sym_num = Integer.parseInt(ParseUtils.splitChar(hmmLines.get(1),'=').get(1));
-			init_line_num = Integer.parseInt(ParseUtils.splitChar(hmmLines.get(2),'=').get(1));
-			trans_line_num = Integer.parseInt(ParseUtils.splitChar(hmmLines.get(3),'=').get(1));
-			emiss_line_num = Integer.parseInt(ParseUtils.splitChar(hmmLines.get(4),'=').get(1));
-		}
+		checkHMM(hmm_file);
+	}
+	
+	public void checkHMM(String hmm_file) {
+		List<List<String>> hmmLines = ParseUtils.splitLinesWhitespace(FileUtils.readFile(hmm_file));
+//		System.out.println("hmm lines: "+hmmLines.size());
+//		if (hmmLines.size() > 4) {
+//			state_num = Integer.parseInt(ParseUtils.splitChar(hmmLines.get(0),'=').get(1));
+//			sym_num = Integer.parseInt(ParseUtils.splitChar(hmmLines.get(1),'=').get(1));
+//			init_line_num = Integer.parseInt(ParseUtils.splitChar(hmmLines.get(2),'=').get(1));
+//			trans_line_num = Integer.parseInt(ParseUtils.splitChar(hmmLines.get(3),'=').get(1));
+//			emiss_line_num = Integer.parseInt(ParseUtils.splitChar(hmmLines.get(4),'=').get(1));
+//		}
 		int lineI = 5;
 		for (; lineI<hmmLines.size(); lineI++) {
-			if (hmmLines.get(lineI).contains("\\init")) {
+			if (hmmLines.get(lineI).get(0).contains("\\init")) {
 				break;
 			}
 		}
 		lineI++;
 		
+//		states = new HashSet<String>();
+		stateToIndex = new HashMap<String, Integer>();
+		int stateIndex=0;
+		// Parse initials
 		initials = new HashMap<String, Double>();
-		int initLineCount = 0;
-		String line = "";
+//		int initLineCount = 0;
+		List<String> line;
 		for (; lineI<hmmLines.size(); lineI++) {
 			line = hmmLines.get(lineI);
-			if (line.contains("\\transition")) {
+			if (line.get(0).contains("\\transition")) {
 				break;
 			}
-			initLineCount++;
-			String[] splitLine = line.split("\\s");
-			if (splitLine.length > 1) {
-				initials.put(splitLine[0], Double.parseDouble(splitLine[1]));
+//			initLineCount++;
+			if (line.size() > 1) {
+				double prob = Double.parseDouble(line.get(1));
+				if (prob < 0.0 || prob > 1.0) {
+					System.err.println("warning: the prob is not in [0,1] range: "+line);
+					continue;
+				}
+				initials.put(line.get(0), Math.log10(prob));
+				stateToIndex.put(line.get(0), stateIndex); // Get a set of all states.	
+				stateIndex++;
+//				states.add(line.get(0));
 			}
 		}
 		lineI++;
 
-		trigrams = new HashMap<String, Double>();
-		states = new HashSet<String>();
-		int transLineCount = 0;
+		// Parse transitions
+//		gramProbs = new HashMap<String, Double>();
+//		HashSet<String> tagsSet = new HashSet<String>();
+//		int transLineCount = 0;
+
+//		for (; lineI<hmmLines.size(); lineI++) {
+//			line = hmmLines.get(lineI);
+//			if (line.contains("\\emission")) {
+//				break;
+//			}
+//			transLineCount++;
+//			String[] splitLine = line.split("\\s");
+//			if (splitLine.length > 2) {
+//					states.add(splitLine[1]); // Get a set of all states.	
+//				if (maxOrder > 2 && ParseUtils.splitChar(splitLine[1],'_').size() > 1) {
+//					// Form a trigram A_B_C out of the to and from states A_B, B_C.
+//					tags.add(splitLine[0]);
+//					tags.add(splitLine[1]);
+//					List<String> splitGram = ParseUtils.splitChar(splitLine[1],'_');
+//					String trigram = splitLine[0]+"_"+splitGram.get(1);
+//					gramProbs.put(trigram, Double.parseDouble(splitLine[2]));
+//					tagsSet.add(splitGram.get(1));
+//				} else if (maxOrder == 2) {
+//					gramProbs.put(splitLine[0]+"_"+splitLine[1], Double.parseDouble(splitLine[2]));
+//				}
+//			}
+//		}
+		// Map state names to indices
+		int transitionLineI = lineI;
 		for (; lineI<hmmLines.size(); lineI++) {
 			line = hmmLines.get(lineI);
-			if (line.contains("\\emission")) {
+			if (line.get(0).contains("\\emission")) {
 				break;
 			}
-			transLineCount++;
-			String[] splitLine = line.split("\\s");
-			if (splitLine.length > 2) {
-				states.add(splitLine[1]);
-				if (ParseUtils.splitChar(splitLine[1],'_').size() > 1) {
-					String trigram = splitLine[0]+ParseUtils.splitChar(splitLine[1],'_').get(1);
-					trigrams.put(trigram, Double.parseDouble(splitLine[2]));
+			if (line.size() > 2) {
+				if (!stateToIndex.containsKey(line.get(1))) {
+					stateToIndex.put(line.get(1), stateIndex); // Get a set of all states.	
+					stateIndex++;
 				}
 			}
 		}
+		// Map indices to state names.
+		indexToState = new String[stateToIndex.size()];
+		for (Entry<String, Integer> stateEntry : stateToIndex.entrySet()) {
+			indexToState[stateEntry.getValue()] = stateEntry.getKey();
+		}
+		// Form graph using state indices.
+		state_num = stateIndex;
+		stateGraph = new double[state_num][state_num]; // Each from state has an array of to states.
+		StatUtils.fillArrayDouble(stateGraph, Double.NEGATIVE_INFINITY);
+		int emissionLineI=lineI;
+		lineI = transitionLineI; // Go through transition lines again.
+		for (; lineI<emissionLineI; lineI++) {
+			line = hmmLines.get(lineI);
+			if (line.size() > 2) {
+				// Store to_state in array of from_state.
+				double prob = Double.parseDouble(line.get(2));
+				if (prob < 0.0 || prob > 1.0) {
+					System.err.println("warning: the prob is not in [0,1] range: "+line);
+					continue;
+				}
+				stateGraph[stateToIndex.get(line.get(0))][stateToIndex.get(line.get(1))] = Math.log10(prob);
+			}
+		}
+		
+		// Make array of initial probabilities
+		initialProbs = new double[state_num];
+		Arrays.fill(initialProbs, Double.NEGATIVE_INFINITY);
+		initialIndices = new ArrayList<Integer>();
+		for (Entry<String, Double> entry : initials.entrySet()) {
+			int initIndex = stateToIndex.get(entry.getKey());
+			initialProbs[initIndex] = entry.getValue();
+			initialIndices.add(initIndex);
+		}
+		
+//		tags = new ArrayList<String>(tagsSet);
 		lineI++;
 		
-		symbols = new HashMap<String, Map<String, Double>>();
-		tokens = new HashSet<String>();
-		int emisLineCount = 0;
+		// Parse emissions
+//		symbols = new HashMap<String, Map<String, Double>>();
+//		tokens = new HashSet<String>();
+////		int emisLineCount = 0;
+//		for (; lineI<hmmLines.size(); lineI++) {
+//			line = hmmLines.get(lineI);
+////			emisLineCount++;
+//			if (line.size() > 2) {
+////				String symbols = splitLine[0]+ParseUtils.splitChar(splitLine[1],'_').get(1);
+//				Map<String, Double> posMap;
+//				if (symbols.containsKey(line.get(0))) {
+//					posMap = symbols.get(line.get(0));
+//				} else {
+//					posMap = new HashMap<String, Double>();
+//				}
+//				posMap.put(line.get(1), Double.parseDouble(line.get(2)));
+//			
+//				symbols.put(line.get(0),posMap);
+//				tokens.add(line.get(1));
+//			}
+//		}
+		
+		symbolToIndex = new HashMap<String, Integer>();
+		int symbolIndex = 0;
+		symbolToIndex.put("<unk>", symbolIndex);
+		symbolIndex++;
+		emissionLineI = lineI;
 		for (; lineI<hmmLines.size(); lineI++) {
 			line = hmmLines.get(lineI);
-			emisLineCount++;
-			String[] splitLine = line.split("\\s");
-			if (splitLine.length > 2) {
-				states.add(splitLine[1]);
-//				String symbols = splitLine[0]+ParseUtils.splitChar(splitLine[1],'_').get(1);
-				Map<String, Double> posMap;
-				if (symbols.containsKey(splitLine[0])) {
-					posMap = symbols.get(splitLine[0]);
-				} else {
-					posMap = new HashMap<String, Double>();
+			if (line.size() > 2) {
+				if (!symbolToIndex.containsKey(line.get(1))) {
+					symbolToIndex.put(line.get(1), symbolIndex);
+					symbolIndex++;
 				}
-				posMap.put(splitLine[1], Double.parseDouble(splitLine[2]));
-			
-				symbols.put(splitLine[0],posMap);
-				tokens.add(splitLine[1]);
 			}
 		}
+		indexToSymbol = new String[symbolIndex+1];
+		sym_num = symbolIndex+1;
+		stateSymbols = new double[sym_num][sym_num];
+		StatUtils.fillArrayDouble(stateSymbols, Double.NEGATIVE_INFINITY);
+		lineI = emissionLineI;
+		for (; lineI<hmmLines.size(); lineI++) {
+			line = hmmLines.get(lineI);
+			if (line.size() > 2) {
+				double prob = Double.parseDouble(line.get(2));
+				if (prob < 0.0 || prob > 1.0) {
+					System.err.println("warning: the prob is not in [0,1] range: "+line);
+					continue;
+				}
+				stateSymbols[stateToIndex.get(line.get(0))][symbolToIndex.get(line.get(1))] = Math.log10(prob);
+//				System.out.println("Setting symbol prob at state "+stateToIndex.get(line.get(0))+" symbol "+symbolToIndex.get(line.get(1))+" to "+Math.log10(prob));
+			}
+		}
+		hmmLines = null;
 		
-		if (state_num != states.size()) {
-			System.out.println("warning: different numbers of state_num: claimed="+state_num+", real="+states.size());
-		} else {
-			System.out.println("state_num="+state_num);
+//		if (state_num != states.size()) {
+//			System.out.println("warning: different numbers of state_num: claimed="+state_num+", real="+states.size());
+//		} else {
+//			System.out.println("state_num="+state_num);
+//		}
+//		if (sym_num != tokens.size()) {
+//			System.out.println("warning: different numbers of sym_num: claimed="+sym_num+", real="+tokens.size());
+//		} else {
+//			System.out.println("sym_num="+sym_num);
+//		}
+//		
+//		if (init_line_num != initLineCount) {
+//			System.out.println("warning: different numbers of init_line_num: claimed="+init_line_num+", real="+initLineCount);
+//		} else {
+//			System.out.println("init_line_num="+init_line_num);
+//		}
+//		
+//		if (trans_line_num != transLineCount) {
+//			System.out.println("warning: different numbers of trans_line_num: claimed="+trans_line_num+", real="+transLineCount);
+//		} else {
+//			System.out.println("trans_line_num="+trans_line_num);
+//		}
+//		
+//		if (emiss_line_num != emisLineCount) {
+//			System.out.println("warning: different numbers of emiss_line_num: claimed="+emiss_line_num+", real="+emisLineCount);
+//		} else {
+//			System.out.println("emiss_line_num="+emiss_line_num);
+//		}
+		// Check that initial state probabilities sum to 1.
+//		double init_prob_sum = StatUtils.getMapTotalDouble(initials);
+//		if (!StatUtils.equalsDouble(init_prob_sum, 1.0)) {
+//			System.out.println("warning: the init_prob_sum is "+init_prob_sum);
+//		}
+		
+		// Check that transition probabilities sum to 1.
+		// For each from_state, sum each of its possible to_states.
+		
+//		for (String fromState : states) {
+//			double sum = 0.0;
+//			for (String tag : tags) {
+//				String complete_gram = fromState+"_"+tag;
+//				if (gramProbs.containsKey(complete_gram)) {
+//					sum+=gramProbs.get(complete_gram);
+//				}
+//			}
+//			if (!StatUtils.equalsDouble(sum, 1.0)) {
+//				System.out.println("warning: the trans_prob_sum for state "+fromState+" is "+sum);
+//			}
+//		}
+		
+		// Check that the symbol probs for each tag (in emission) sum to 1.
+//		for (String state : states) {
+//			if (!state.equals("BOS")) {
+//				double sum = 0.0;
+//				if (symbols.containsKey(state)) {
+//					sum = StatUtils.getMapTotalDouble(symbols.get(state));
+//				} 
+//				if (!StatUtils.equalsDouble(sum, 1.0)) {
+//					System.out.println("warning: the emiss_prob_sum for state "+state+" is "+sum);
+//				}
+//			}
+//		}
+	}
+	
+	/*
+	 * Viterbi Algorithm
+	 * Input: 
+	 * 	observations of len T: List<String> observations
+	 * 	state-graph of len N: double[fromState][toState] stateGraph
+	 *  Returns best path, as a String of states, with the last token of the string being the probability of the path.
+	 */
+	public String viterbi(List<String> observations) {
+		observations.add("<s>");
+		int num_obs = observations.size();
+		double[][] pathProbs = new double[state_num+2][num_obs+1]; // path probability matrix viterbi[N+2, T]
+		pathProbs = StatUtils.fillArrayDouble(pathProbs, Double.NEGATIVE_INFINITY);
+		int[][] backpointer = new int[state_num+2][num_obs+1]; // Backpointers, for retrieving the best path at the end.
+		// Initialization
+		// For each initial state, put its initial probability in the first column of pathProbs, for the index of the initial state.
+		// Set backpointers for each state to the most likely 
+//		for (int initialI=0; initialI<initials.size(); initialI++) {
+		for (int initI : initialIndices) {
+			pathProbs[initI][0] = initialProbs[initI];
+		}
+		int stepI;
+		for (stepI=1; stepI<=num_obs; stepI++) {
+			int symI = 0; // Set symbol to <unk> by default.
+			if (symbolToIndex.containsKey(observations.get(stepI-1))) {
+				symI = symbolToIndex.get(observations.get(stepI-1));
+			}
+			for (int stateI=0; stateI<state_num; stateI++) {
+				double symProb = stateSymbols[stateI][symI];
+				if (symProb == Double.NEGATIVE_INFINITY) {
+					continue;
+				} 
+//				else {
+//					System.out.print("state: "+stateI+" "+indexToState[stateI]+" ");
+//					System.out.print("sym index: "+symI+" sym prob: "+symProb+"\n");
+//				}
+				double bestProb = Double.NEGATIVE_INFINITY;
+				int bestState = -1;
+				for (int prevStateI=0; prevStateI<state_num; prevStateI++) {
+					double pathProb = pathProbs[prevStateI][stepI-1];
+//					System.out.println("pathProbs: "+pathProbs);
+			
+					if (pathProb == Double.NEGATIVE_INFINITY) {
+						continue;
+					} 
+//					else {
+//						System.out.print("pathProb: "+pathProb+" ");
+//					}
+					double transProb = stateGraph[prevStateI][stateI];
+					if (transProb == Double.NEGATIVE_INFINITY) {
+						continue;
+					} 
+//					else {
+//						System.out.print("transProb: "+transProb);
+//					}
+//					System.out.print("prev state: "+prevStateI+" {"+indexToState[prevStateI]+") current state: "+stateI+" ("+indexToState[stateI]+") pathprob: "+pathProb+" transProb: "+transProb+"\n");
+					double prevProb = pathProb + transProb + symProb;
+//					System.out.println("prevProb: "+prevProb);
+					if (prevProb > bestProb) {
+//						System.out.println("Found prob: "+prevProb+" state: "+prevStateI);
+						bestProb = prevProb;
+						bestState = prevStateI;
+					}
+//					System.out.println();
+				}
+//				System.out.println("Best prob: "+bestProb+" best state: "+bestState+" ("+indexToState[bestState]+")");
+				pathProbs[stateI][stepI] = bestProb;
+				backpointer[stateI][stepI] = bestState;
+			}
+			
+		}
+		double bestProb = Double.NEGATIVE_INFINITY;
+		int bestState = -1;
+		for (int nextStateI=0; nextStateI<state_num; nextStateI++) {
+			double nextProb = pathProbs[nextStateI][num_obs-1];
+			if (nextProb > bestProb) {
+				bestProb = nextProb;
+				bestState = nextStateI;
+			}
+//			System.err.println("best final prob: "+bestProb+" best final state: "+bestState);
 		}
 		
-		if (sym_num != tokens.size()) {
-			System.out.println("warning: different numbers of sym_num: claimed="+sym_num+", real="+tokens.size());
+//		backpointer[bestState][stepI] = bestState;
+		StringBuilder tagStr = new StringBuilder();
+		if (bestState == -1) {
+			tagStr.append("*NONE*");
 		} else {
-			System.out.println("sym_num="+sym_num);
+			int currPointer = bestState;
+			for (stepI=num_obs-1; stepI>=0; stepI--) {
+				tagStr.insert(0, indexToState[currPointer]+" ");
+				currPointer = backpointer[currPointer][stepI];
+			}
+			tagStr.append(bestProb);
+		}
+		observations.remove(observations.size()-1);
+		return tagStr.toString();
+	}
+	
+	/*
+	 * Use the Viterbi algorithm on a give line of text to apply POS tags.
+	 * Return format: text => tags lgprob
+	 */
+	public String tagLine(String text) {
+		List<String> words = ParseUtils.splitSpaces(text);
+		String bestTags = viterbi(words);
+		String taggedStr = ParseUtils.listToString(words)+" => "+bestTags;
+		return taggedStr;
+	}
+	
+	/*
+	 * Read in file input_file and tag each line.
+	 * Write to file output_file.
+	 * Use the Viterbi algorithm to perform the tagging.
+	 */
+	public void tagFile(String input_file, String output_file) {
+		List<String> lines = FileUtils.readLines(input_file);
+		StringBuilder outputStr = new StringBuilder();
+		for (String line : lines) {
+			outputStr.append(tagLine(line)+"\n");
 		}
 		
-		if (init_line_num != initLineCount) {
-			System.out.println("warning: different numbers of init_line_num: claimed="+init_line_num+", real="+initLineCount);
-		} else {
-			System.out.println("init_line_num="+init_line_num);
+		FileUtils.writeFile(output_file, outputStr.toString());
+	}
+	
+	/*
+	 * Convert tagging format to w1/t1 wn/tn.
+	 */
+	public static String convertFormat(String inputStr) {
+		List<String> lines = ParseUtils.splitLines(inputStr);
+		StringBuilder outputStr = new StringBuilder();
+		for (String line : lines) {
+			String[] splitLine = line.split("\\s=>\\s");
+			if (splitLine.length > 1) {
+				String[] words = splitLine[0].split("\\s+");
+				String[] tags = splitLine[1].split("\\s+");
+				if (words.length != tags.length-2) { // Skip start state (BOS_BOS) and don't include probability at end.
+					System.err.println("Warning: There are "+words.length+" words and "+(tags.length-2)+" corresponding tags in the following line:\n"+line);
+				}
+				for (int wordI=0; wordI<words.length; wordI++) {
+					outputStr.append(words[wordI]+"/");
+					if (tags.length-2 > wordI) {
+						List<String> splitState = ParseUtils.splitChar(tags[wordI+1], '_');
+						if (splitState.size() > 1) {
+							outputStr.append(splitState.get(1));
+						} else {
+							outputStr.append(tags[wordI+1]);
+						}
+					} else {
+						outputStr.append(words[wordI]);
+					}
+					if (wordI<words.length-1) {
+						outputStr.append(" ");
+					}
+				}
+				outputStr.append("\n");
+			}
 		}
-		
-		if (trans_line_num != transLineCount) {
-			System.out.println("warning: different numbers of trans_line_num: claimed="+trans_line_num+", real="+transLineCount);
-		} else {
-			System.out.println("trans_line_num="+trans_line_num);
-		}
-		
-		if (emiss_line_num != emisLineCount) {
-			System.out.println("warning: different numbers of emiss_line_num: claimed="+emiss_line_num+", real="+emisLineCount);
-		} else {
-			System.out.println("emiss_line_num="+emiss_line_num);
-		}
+		return outputStr.toString();
 	}
 	
 	/*
@@ -190,6 +497,7 @@ public class HMM {
 				unkProbs.put(splitLine[0], Double.parseDouble(splitLine[1]));
 			}
 		}
+		tokens.add("<unk>");
 	}
 	
 	/*
@@ -244,6 +552,7 @@ public class HMM {
 	 * Increment count for gram count for this tag.
 	 */
 	public void getNGramTagCounts(String text, int maxOrder) {
+		tokens = new HashSet<String>();
 		gramCounts = new ArrayList<Map<String, Double>>();
 		for (int i=0; i<maxOrder; i++) {
 			gramCounts.add(new LinkedHashMap<String, Double>());
@@ -281,6 +590,7 @@ public class HMM {
 							} else {
 								StatUtils.incrementOne(initialCounts, token[1]);
 							}
+							tokens.add(token[0]);
 						} else {
 							gramStr += "_";
 						}
@@ -317,7 +627,7 @@ public class HMM {
 		for (Entry<String, Double> entry : firstGram.entrySet()) {
 			probsMap.put(entry.getKey(), entry.getValue() / total);
 		}
-		// Calculate bigram probs.
+		// Calculate bigram and trigram probs, without smoothing.
 		for (int n=1; n<3; n++) {
 			probsMap = gramProbs.get(n);
 			Map<String, Double> countsMap = gramCounts.get(n);
@@ -383,9 +693,9 @@ public class HMM {
 	
 	@Override
 	public String toString() {
-		state_num = (int) Math.pow(tags.size()+1,maxOrder-1);
-		sym_num = symbols.size()+1; //+1 for <unk>
+		state_num = (int) Math.pow(tags.size(),maxOrder-1); // 
 		init_line_num = initials.size();
+		sym_num = tokens.size()-1; // Don't count <s>
 		if (maxOrder == 2) {
 			emiss_line_num = StatUtils.getTotalElementsDouble(symbols);
 		}
@@ -452,7 +762,7 @@ public class HMM {
 //		System.out.println("trans_line_num: "+trans_line_num);
 		
 		StringBuilder hmmString = new StringBuilder();
-		hmmString.append("state_num="+state_num+"\nsyn_num="+sym_num+"\ninit_line_num="+init_line_num+"\ntrans_line_num="+trans_line_num+
+		hmmString.append("state_num="+state_num+"\nsym_num="+sym_num+"\ninit_line_num="+init_line_num+"\ntrans_line_num="+trans_line_num+
 				"\nemiss_line_num="+emiss_line_num+"\n\n");
 		hmmString.append("\\init\n");
 		// Add initial symbol probabilities
