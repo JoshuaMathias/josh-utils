@@ -19,10 +19,14 @@ import java.io.Writer;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 public class FileUtils {
+	
+	
 	// If the path is a directory, recursively get a list of all the files.
 		public static List<File> listFiles(File path) {
 			List<File> files = new ArrayList<File>();
@@ -40,10 +44,31 @@ public class FileUtils {
 			return files;
 		}
 		
+		public static List<File> listFiles(String path) {
+			return listFiles(new File(path));
+		}
+		
+		// For each directory in the list, recursively get a list of all the files.
+		// Skip list entries that are not directories.
+		// Return the files as a map of folders (key) to a list of files (value).
+		// Ignores files not in subfolders (files in the root folder).
+		public static Map<String, List<File>> mapDirFiles(List<String> dirs) {
+			Map<String, List<File>> fileMap = new LinkedHashMap<String, List<File>>();
+			for (String dir : dirs) {
+				File currentDir = new File(dir);
+				if (currentDir.isDirectory()) {
+					List<File> files = listFiles(currentDir);
+					fileMap.put(currentDir.getName(), files);
+				}
+			}
+			return fileMap;
+		}
+		
 		// If the path is a directory, recursively get a list of all the files.
-		// Return the files as a map of folders. Ignores files not in subfolders.
-		public static HashMap<String, List<File>> listFolders(File path) {
-			HashMap<String, List<File>> fileMap = new HashMap<String, List<File>>();
+		// Return the files as a map of folders (key) to a list of files (value).
+		// Ignores files not in subfolders (files in the root folder).
+		public static Map<String, List<File>> mapSubDirFiles(File path) {
+			Map<String, List<File>> fileMap = new LinkedHashMap<String, List<File>>();
 			if (path.isDirectory()) {
 				for (File currentFile : path.listFiles()) {
 					if (currentFile.isDirectory()) {
@@ -95,6 +120,9 @@ public class FileUtils {
 			return writer;
 		}
 		
+		/*
+		 * @args filename text
+		 */
 		public static void writeFile(String filename, String text) {
 			try {
 				BufferedWriter writer = getWriter(filename);

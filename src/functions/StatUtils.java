@@ -107,7 +107,7 @@ public class StatUtils {
 	 * with the number of times it appears in the given text (value).
 	 */
 	public static HashMap<String, Integer> getTokenCounts(String text) {
-		String[] tokens = text.split("\\s");
+		String[] tokens = text.split("\\s+");
 		HashMap<String, Integer> tokenCounts = new HashMap<String, Integer>();
 		int count = 0;
 		for (int i=0; i<tokens.length; i++) {
@@ -362,6 +362,7 @@ public class StatUtils {
 		
 		/*
 		 * Sort by keys and return a LinkedList.
+		 * 
 		 */
 		public static List<Entry<String, Integer>> sortKeys(Map<String, Integer> passedMap, final boolean reverse) {
 		    List<Entry<String, Integer>> mapList = new LinkedList<Entry<String, Integer>>(passedMap.entrySet());

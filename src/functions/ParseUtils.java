@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /*
  * Functions for processing text.
@@ -111,6 +113,9 @@ public class ParseUtils {
 		return splitNChar(text, ' ', n);
 	}
 	
+	/*
+	 * Return only the part of the String before the nth occurrence of char ch.
+	 */
 	public static String getUntilNChar(String text, char ch, int n) {
 		if (sb == null) {
 			sb = new StringBuilder();
@@ -132,6 +137,70 @@ public class ParseUtils {
 		sb.setLength(0);
 		return tokens;
 	}
+	
+	/*
+	 * Return only the part of the String after the nth occurrence of char ch.
+	 */
+	public static String getAfterNChar(String text, char ch, int n) {
+		if (sb == null) {
+			sb = new StringBuilder();
+		}
+		char[] chars = text.toCharArray();
+		int chCount = 0;
+		int i=0;
+		for (; i<chars.length; i++) {
+			if (chars[i] == ch) {
+				chCount++;
+				if (chCount >= n) {
+					break;
+				}
+			}
+		}
+		for (; i<chars.length; i++) {
+			sb.append(chars[i]);
+		}
+		String tokens = sb.toString();
+		sb.setLength(0);
+		return tokens;
+	}
+	
+	/*
+	 * Return only the part of the String after the first occurrence of the given String.
+	 */
+	public static String getAfterString(String text, String str) {
+		int foundI = text.indexOf(str);
+		if (sb == null) {
+			sb = new StringBuilder();
+		}
+		char[] chars = text.toCharArray();
+		for (int i=foundI+1; i<chars.length; i++) {
+			sb.append(chars[i]);
+		}
+		String tokens = sb.toString();
+		sb.setLength(0);
+		return tokens;
+	}
+	
+	/*
+	 * Return only the part of the String after the first occurrence of the given Regular expression.
+	 */
+	public static String getAfterRegex(String text, String regex) {
+		Matcher textMatcher = Pattern.compile(regex).matcher(text);
+		textMatcher.find();
+		int foundI = textMatcher.end();
+		if (sb == null) {
+			sb = new StringBuilder();
+		}
+		char[] chars = text.toCharArray();
+		for (int i=foundI; i<chars.length; i++) {
+			sb.append(chars[i]);
+		}
+		String tokens = sb.toString();
+		sb.setLength(0);
+		return tokens;
+	}
+	
+	
 	
 	/*
 	 * Get only n first words in the text, split by ' '.
@@ -468,6 +537,15 @@ public class ParseUtils {
 	/*
 	 * ToString methods.
 	 */
+	
+	public static String arrayToString(String[] arr) {
+		StringBuilder listStr = new StringBuilder();
+		for (String token : arr) {
+			listStr.append(token+" ");
+		}
+		listStr.setLength(listStr.length()-1);
+		return listStr.toString();
+	}
 	
 	public static String listToString(List<String> list) {
 		StringBuilder listStr = new StringBuilder();

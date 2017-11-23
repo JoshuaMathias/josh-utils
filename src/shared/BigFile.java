@@ -1,5 +1,9 @@
 package shared;
 
+/*
+ * Class for processing very large files.
+ * Provides chunking and time reporting capabilities.
+ */
 public class BigFile {
 	long startTime;
 
