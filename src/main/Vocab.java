@@ -20,7 +20,7 @@ public class Vocab {
 		} else {
 			text = FileUtils.readFile(inFile);
 		}
-		String vocabStr = ParseUtils.listEntriesToString(StatUtils.sortValues(StatUtils.getTokenCounts(text), false));
+		String vocabStr = ParseUtils.listEntriesToString(StatUtils.sortValues(StatUtils.getTokenCounts(text), false), true);
 		if (inFile == null) {
 			System.out.println(vocabStr);
 		} else {

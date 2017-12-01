@@ -16,6 +16,8 @@ import java.io.PrintStream;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.lang.ProcessBuilder;
+import java.lang.ProcessBuilder.Redirect;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -126,6 +128,7 @@ public class FileUtils {
 		public static void writeFile(String filename, String text) {
 			try {
 				BufferedWriter writer = getWriter(filename);
+//				System.out.println("Writing text: "+text+" to "+filename);
 				writer.write(text);
 				writer.close();
 			} catch (IOException e) {
@@ -234,5 +237,72 @@ public class FileUtils {
 				throw new InternalError("VM does not support mandatory encoding UTF-8");
 			}
 			System.out.println(text);
+		}
+		
+		/*
+		 * Commands
+		 */
+		/*
+		 * Run a command, without handling output or input.
+		 */
+		public static void runCommand(String command) {
+			System.out.println("Command: "+command);
+			try {
+				Runtime.getRuntime().exec(command);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		/*
+		 * Run a command, without handling output or input.
+		 */
+		public static void runCommand(String[] command) {
+//			System.out.println("Command: "+command);
+			try {
+				Runtime.getRuntime().exec(command);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		/*
+		 * Run a command and redirect standard output and standard input to the given file locations.
+		 */
+		public static void runCommandOutErr(String command, String outFile, String errFile) {
+			ProcessBuilder builder = new ProcessBuilder(command);
+			builder.redirectOutput(Redirect.to(new File(outFile)));
+			builder.redirectError(Redirect.to(new File(errFile)));
+			try {
+				builder.start();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		/*
+		 * Run a command, and retrieve the output.
+		 */
+		public static String getCommandOutput(String command) {
+			try {
+				Process p = Runtime.getRuntime().exec(command);
+				return readFile(p.getInputStream());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			return "";
+		}
+		
+		/*
+		 * Run a command, and output to stdout.
+		 */
+		public static void printCommandOutput(String command) {
+			System.out.println("Command: "+command);
+			try {
+				Process p = Runtime.getRuntime().exec(command);
+				writeStdOut(readFile(p.getInputStream()));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 }

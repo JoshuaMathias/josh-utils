@@ -103,20 +103,45 @@ public class StatUtils {
 	
 	
 	/*
+	 * Writes a vocab file of word\tfrequency on each line, in descending order by frequency.
+	 */
+	public static Map<String, Integer> writeTokenCounts(String text, String outputFile) {
+		Map<String, Integer> tokenCounts = getTokenCounts(text);
+		List<Entry<String, Integer>> sortedCounts = sortValues(tokenCounts, true);
+		FileUtils.writeFile(outputFile, ParseUtils.listEntriesToString(sortedCounts));
+		return tokenCounts;
+	}
+	
+	/*
 	 * Returns a map containing each different type of token (key),
 	 * with the number of times it appears in the given text (value).
 	 */
-	public static HashMap<String, Integer> getTokenCounts(String text) {
+	public static Map<String, Integer> getTokenCounts(String text) {
 		String[] tokens = text.split("\\s+");
 		HashMap<String, Integer> tokenCounts = new HashMap<String, Integer>();
-		int count = 0;
 		for (int i=0; i<tokens.length; i++) {
 			if (tokens[i].length() > 0) {
 				incrementOne(tokenCounts, tokens[i]);
-				count++;
 			}
 		}
-//		System.out.println("Number of tokens: "+count);
+		return tokenCounts;
+	}
+	
+	/*
+	 * Returns a map containing each different type of token (key),
+	 * with the number of times it appears in the given text (value).
+	 * Only make counts for the words.
+	 * Don't include first and last tokens (<s> and </s>).
+	 */
+	public static Map<String, Integer> getPOSWordCounts(List<List<String[]>> tokens) {
+		HashMap<String, Integer> tokenCounts = new HashMap<String, Integer>();
+		for (List<String[]> sentence : tokens) {
+			for (int i=1; i<sentence.size()-1; i++) {
+				if (sentence.get(i).length > 0) {
+					incrementOne(tokenCounts, sentence.get(i)[0]);
+				}
+			}
+		}
 		return tokenCounts;
 	}
 	
@@ -418,6 +443,26 @@ public class StatUtils {
 		    
 		    Collections.sort(mapList, entryComparator);
 		    return mapList;
+		}
+		
+		public static Map<String, Integer> sortValuesGetMap(
+		        Map<String, Integer> passedMap, final boolean reverse) {
+		    List<Entry<String, Integer>> mapList = new LinkedList<Entry<String, Integer>>(passedMap.entrySet());
+		    Comparator<Entry<String, Integer>> entryComparator = new  Comparator<Entry<String, Integer>>() {
+		    	public int compare(Entry<String, Integer> e1, Entry<String, Integer> e2) {
+		    		if (reverse) {
+		    			return e2.getValue().compareTo(e1.getValue());
+		    		}
+		    		return e1.getValue().compareTo(e2.getValue());
+		    	}
+		    };
+		    
+		    Collections.sort(mapList, entryComparator);
+		    LinkedHashMap<String, Integer> sortedMap = new LinkedHashMap<String, Integer>();
+		    for (Entry<String, Integer> entry : mapList) {
+		    	sortedMap.put(entry.getKey(), entry.getValue());
+		    }
+		    return sortedMap;
 		}
 		
 		public static List<Entry<String, Double>> sortValuesDouble(Map<String, Double> passedMap) {

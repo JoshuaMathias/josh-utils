@@ -18,7 +18,7 @@ public class CreateVectors {
 	public static String getVectorStr(File file) {
 		String text = FileUtils.readFile(file);
 		text = TokenUtils.tokenizeFeatures(ParseUtils.getAfterRegex(text, "\n\\s*\n"));
-		HashMap<String, Integer> tokenCounts = StatUtils.getTokenCounts(text);
+		Map<String, Integer> tokenCounts = StatUtils.getTokenCounts(text);
 		List<Entry<String, Integer>> sortedTokens = StatUtils.sortKeys(tokenCounts, false);
 		StringBuilder outputStr = new StringBuilder();
 		String targetLabel = file.getParentFile().getName();

@@ -405,8 +405,10 @@ public class ParseUtils {
 					String word = sentenceSB.toString();
 					String[] splitWord = splitLastChar(word, '/');
 					if (splitWord.length > 1) {
-						splitWord[0] = escapeChar(splitWord[0], '/');
+//						splitWord[0] = escapeChar(splitWord[0], '/');
 						words.add(splitWord);
+					} else {
+						words.add(new String[] {word, word});
 					}
 				}
 				if (words.size() > 1) {
@@ -422,8 +424,10 @@ public class ParseUtils {
 					String word = sentenceSB.toString();
 					String[] splitWord = splitLastChar(word, '/');
 					if (splitWord.length > 1) {
-						splitWord[0] = escapeChar(splitWord[0], '/');
+//						splitWord[0] = escapeChar(splitWord[0], '/');
 						words.add(splitWord);
+					} else {
+						words.add(new String[] {word, word});
 					}
 				}
 				sentenceSB.setLength(0);
@@ -437,6 +441,8 @@ public class ParseUtils {
 			if (splitWord.length > 1) {
 				splitWord[0] = escapeChar(splitWord[0], '/');
 				words.add(splitWord);
+			} else {
+				words.add(new String[] {word, word});
 			}
 		}
 		if (words.size() > 1) {
@@ -461,6 +467,43 @@ public class ParseUtils {
 	// Example: \u002e
 	public static String getUnicode(char ch) {
 		return "\\u" + Integer.toHexString(ch | 0x10000).substring(1);
+	}
+	
+	/*
+	 * Character analysis
+	 */
+	public static boolean containsDigit(String text) {
+		char[] chars = text.toCharArray();
+		for (int i=0; i<chars.length; i++) {
+			if (Character.isDigit(chars[i])) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public static boolean containsUppercase(String text) {
+		char[] chars = text.toCharArray();
+		for (int i=0; i<chars.length; i++) {
+			if (Character.isUpperCase(chars[i])) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public static boolean containsHyphen(String text) {
+		return containsChar(text, '-');
+	}
+	
+	public static boolean containsChar(String text, char ch) {
+		char[] chars = text.toCharArray();
+		for (int i=0; i<chars.length; i++) {
+			if (chars[i] == ch) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	/*
@@ -559,7 +602,7 @@ public class ParseUtils {
 	public static String mapToString(Map<String, Integer> map) {
 		StringBuilder mapStr = new StringBuilder();
 		for (Entry<String, Integer> entry : map.entrySet()) {
-			mapStr.append(entry.getValue()+"\t"+entry.getKey()+"\n");
+			mapStr.append(entry.getKey()+"\t"+entry.getValue()+"\n");
 		}
 		return mapStr.toString();
 	}
@@ -593,6 +636,28 @@ public class ParseUtils {
 	}
 	
 	public static String listEntriesToString(List<Entry<String, Integer>> listEntries) {
+		StringBuilder listStr = new StringBuilder();
+		for (Entry<String, Integer> entry : listEntries) {
+			listStr.append(entry.getKey()+"\t"+entry.getValue()+"\n");
+		}
+		return listStr.toString();
+	}
+	
+	/*
+	 * valueFirst: If true, list the value and then the key on each line.
+	 */
+	public static String listEntriesToString(List<Entry<String, Integer>> listEntries, boolean valueFirst) {
+		if (valueFirst) {
+			return listEntriesToStringValueKey(listEntries);
+		} else {
+			return listEntriesToString(listEntries);
+		}
+	}
+	
+	/*
+	 * valueFirst: If true, list the value and then the key on each line.
+	 */
+	public static String listEntriesToStringValueKey(List<Entry<String, Integer>> listEntries) {
 		StringBuilder listStr = new StringBuilder();
 		for (Entry<String, Integer> entry : listEntries) {
 			listStr.append(entry.getValue()+"\t"+entry.getKey()+"\n");
