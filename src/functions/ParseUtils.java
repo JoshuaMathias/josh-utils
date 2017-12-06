@@ -7,6 +7,8 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import shared.KeysValues;
+
 /*
  * Functions for processing text.
  */
@@ -228,6 +230,9 @@ public class ParseUtils {
 			} else {
 				sb.append(chars[i]);
 			}
+		}
+		if (sb.length() > 0) {
+			words.add(sb.toString());
 		}
 		sb.setLength(0);
 		return words;
@@ -682,9 +687,9 @@ public class ParseUtils {
 		HashMap<String, Double> entries = new HashMap<String, Double>();
 		for (int i=0; i<lines.size(); i++) {
 			try {
-				List<String> splitLines = splitTabs(lines.get(i));
-				if (splitLines.size() > 1) {
-					entries.put(splitLines.get(keyIndex), Double.parseDouble(splitLines.get(valueIndex)));
+				List<String> splitLine = splitTabs(lines.get(i));
+				if (splitLine.size() > 1) {
+					entries.put(splitLine.get(keyIndex), Double.parseDouble(splitLine.get(valueIndex)));
 				}
 			} catch (NumberFormatException e) {
 				System.out.println("Skipping entry "+i+": "+lines.get(i));
@@ -692,6 +697,85 @@ public class ParseUtils {
 		}
 		return entries;
 	}
+	
+	/*
+	 * text: lines, where the items in each line are delimited by whitespace.
+	 * Returns a LinkedHashMap where the first word in each line is the key, and the value is a List of Doubles
+	 * (all the other items on the line).
+	 */
+	public static Map<String, List<Double>> stringToMapList(String text) {
+		List<String> lines = splitLines(text);
+		int keyIndex = 0;
+		HashMap<String, List<Double>> entries = new HashMap<String, List<Double>>();
+		for (int i=0; i<lines.size(); i++) {
+			try {
+				List<String> splitLine = splitWhitespace(lines.get(i));
+				if (splitLine.size() > 0) {
+					List<Double> values = new ArrayList<Double>();
+					for (int wordI=1; wordI<splitLine.size(); wordI++) {
+						values.add(Double.parseDouble(splitLine.get(wordI)));
+					}
+					entries.put(splitLine.get(keyIndex), values);
+				}
+			} catch (NumberFormatException e) {
+				System.out.println("Skipping entry "+i+": "+lines.get(i));
+			}
+		}
+		return entries;
+	}
+	
+	/*
+	 * text: lines, where the items in each line are delimited by whitespace.
+	 * Returns a KeysValues object, containing a list of String keys and a 
+	 * corresponding list of a list of Doubles.
+	 */
+	public static KeysValues<String, List<Double>> stringToTwoLists(String text) {
+		List<String> lines = splitLines(text);
+		int keyIndex = 0;
+		List<String> keys = new ArrayList<String>();
+		List<List<Double>> values = new ArrayList<List<Double>>();
+		for (int i=0; i<lines.size(); i++) {
+			try {
+				List<String> splitLine = splitWhitespace(lines.get(i));
+				if (splitLine.size() > 0) {
+					List<Double> lineValues = new ArrayList<Double>();
+					for (int wordI=1; wordI<splitLine.size(); wordI++) {
+						lineValues.add(Double.parseDouble(splitLine.get(wordI)));
+					}
+					keys.add(splitLine.get(keyIndex));
+					values.add(lineValues);
+				}
+			} catch (NumberFormatException e) {
+				System.out.println("Skipping entry "+i+": "+lines.get(i));
+			}
+		}
+		
+		return new KeysValues<String, List<Double>>(keys,values);
+	}
+	
+	public static KeysValues<String, double[]> stringToListArray(String text) {
+		List<String> lines = splitLines(text);
+		int keyIndex = 0;
+		List<String> keys = new ArrayList<String>();
+		List<double[]> values = new ArrayList<double[]>();
+		for (int i=0; i<lines.size(); i++) {
+			try {
+				List<String> splitLine = splitWhitespace(lines.get(i));
+				if (splitLine.size() > 0) {
+					double[] lineValues = new double[splitLine.size()-1];
+					for (int wordI=1; wordI<splitLine.size(); wordI++) {
+						lineValues[wordI-1] = Double.parseDouble(splitLine.get(wordI));
+					}
+					keys.add(splitLine.get(keyIndex));
+					values.add(lineValues);
+				}
+			} catch (NumberFormatException e) {
+				System.out.println("Skipping entry "+i+": "+lines.get(i));
+			}
+		}
+		return new KeysValues<String, double[]>(keys,values);
+	}
+	
 	
 	/*
 	 * text: lines, where the columns in each line are delimited by tabs.

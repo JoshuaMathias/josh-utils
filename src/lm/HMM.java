@@ -178,7 +178,7 @@ public class HMM {
 		// Form graph using state indices.
 		state_num = stateIndex;
 		stateGraph = new double[state_num][state_num]; // Each from state has an array of to states.
-		StatUtils.fillArrayDouble(stateGraph, Double.NEGATIVE_INFINITY);
+		StatUtils.fill2DArrayDouble(stateGraph, Double.NEGATIVE_INFINITY);
 		int emissionLineI=lineI;
 		lineI = transitionLineI; // Go through transition lines again.
 		for (; lineI<emissionLineI; lineI++) {
@@ -246,7 +246,7 @@ public class HMM {
 		indexToSymbol = new String[symbolIndex+1];
 		sym_num = symbolIndex+1;
 		stateSymbols = new double[sym_num][sym_num];
-		StatUtils.fillArrayDouble(stateSymbols, Double.NEGATIVE_INFINITY);
+		StatUtils.fill2DArrayDouble(stateSymbols, Double.NEGATIVE_INFINITY);
 		lineI = emissionLineI;
 		for (; lineI<hmmLines.size(); lineI++) {
 			line = hmmLines.get(lineI);
@@ -337,7 +337,7 @@ public class HMM {
 		observations.add("<s>");
 		int num_obs = observations.size();
 		double[][] pathProbs = new double[state_num+2][num_obs+1]; // path probability matrix viterbi[N+2, T]
-		pathProbs = StatUtils.fillArrayDouble(pathProbs, Double.NEGATIVE_INFINITY);
+		pathProbs = StatUtils.fill2DArrayDouble(pathProbs, Double.NEGATIVE_INFINITY);
 		int[][] backpointer = new int[state_num+2][num_obs+1]; // Backpointers, for retrieving the best path at the end.
 		// Initialization
 		// For each initial state, put its initial probability in the first column of pathProbs, for the index of the initial state.

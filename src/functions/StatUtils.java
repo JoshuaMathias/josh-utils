@@ -1,4 +1,6 @@
 package functions;
+import hep.aida.bin.StaticBin1D;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,10 +17,31 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import cern.colt.list.DoubleArrayList;
+import cern.colt.matrix.DoubleFactory1D;
+import cern.colt.matrix.DoubleMatrix1D;
+import cern.colt.matrix.doublealgo.Statistic;
+import cern.colt.matrix.doublealgo.Statistic.VectorVectorFunction;
+import cern.colt.matrix.impl.DenseDoubleMatrix1D;
+
 /*
  * Functions for counting and obtaining statistics or information about text or files.
  */
 public class StatUtils {
+	static Statistic.VectorVectorFunction vectorFunction;
+	
+	/*
+	 * Settings, parameters.
+	 */
+	public static void setVectorMeasure(VectorVectorFunction measure) {
+		vectorFunction = measure;
+	}
+	
+	public static void setEuclidMeasure() {
+		vectorFunction = Statistic.EUCLID;
+	}
+	
+	
 	/*
 	 * Probabilities
 	 */
@@ -579,6 +602,22 @@ public class StatUtils {
 			return total;
 		}
 		
+		public static Double getListTotalDouble(List<Double> list) {
+			double total = 0;
+			for (Double entry : list) {
+				total += entry;
+			}
+			return total;
+		}
+		
+		public static Double getListTotal(List<Integer> list) {
+			double total = 0;
+			for (Integer entry : list) {
+				total += entry;
+			}
+			return total;
+		}
+		
 		
 		public static Map<String, Double> divideByTotal(Map<String, Integer> map) {
 			double total = getMapTotal(map);
@@ -607,6 +646,30 @@ public class StatUtils {
 		}
 		
 		/*
+		 * Return the square root of the sum 
+		 */
+		public static Double getSumOfSquaresRoot(List<Double> points) {
+			double total = 0.0;
+			for (int i=0; i<points.size(); i++) {
+				double point = points.get(i);
+				total += point * point;
+			}
+			return Math.sqrt(total);
+		}
+		
+		public static Double getSumOfSquaresRoot(double[] points) {
+			StaticBin1D pointsBin = new StaticBin1D();
+//			double sum = 0.0; // Without using StaticBin
+			for (int i=0; i<points.length; i++) {
+				pointsBin.add(points[i]);
+//				double point = points[i];
+//				sum += point * point;
+			}
+			double sum = pointsBin.sumOfSquares();
+			return Math.sqrt(sum);
+		}
+		
+		/*
 		 * Comparison
 		 */
 		
@@ -622,17 +685,171 @@ public class StatUtils {
 		 * Arrays
 		 */
 		
-		public static int[][] fillArray(int[][] arr, int val) {
+		public static int[][] fill2DArray(int[][] arr, int val) {
 			for (int i=0; i<arr.length; i++) {
 				Arrays.fill(arr[i], val);
 			}
 			return arr;
 		}
 		
-		public static double[][] fillArrayDouble(double[][] arr, double val) {
+		public static double[][] fill2DArrayDouble(double[][] arr, double val) {
 			for (int i=0; i<arr.length; i++) {
 				Arrays.fill(arr[i], val);
 			}
 			return arr;
+		}
+		
+		public static List<Double> fillListDouble(List<Double> arr, int size, double val) {
+			for (int i=0; i<size; i++) {
+				arr.add(val);
+			}
+			return arr;
+		}
+		
+		public static double[] fillArrayDouble(double[] arr, double val) {
+			for (int i=0; i<arr.length; i++) {
+				arr[i] = val;
+			}
+			return arr;
+		}
+		
+		/*
+		 * Distance and Comparison
+		 */
+		
+		public static double getDistance(double[] points1, double[] points2) {
+			DoubleMatrix1D matrix1 = new DenseDoubleMatrix1D(points1);
+			DoubleMatrix1D matrix2 = new DenseDoubleMatrix1D(points2);
+			return vectorFunction.apply(matrix1, matrix2);
+		}
+		
+		/*
+		 * Calculate the Euclidean Distance, comparing each corresponding point.
+		 * There must be the same number of elements in points1 as in points2.
+		 */
+		public static double euclideanDistance(List<Double> points1, List<Double> points2) {
+			double sum = 0.0;
+			for (int i=0; i<points1.size(); i++) {
+				double diff = points1.get(i)-points2.get(i);
+				sum += diff * diff;
+			}
+//			return Math.sqrt(sum);
+			return sum; // Use where we're only comparing relative distances.
+		}
+		
+		public static double euclideanDistance(double[] points1, double[] points2) {
+//			DoubleMatrix1D matrix1 = new DenseDoubleMatrix1D(points1);
+//			DoubleMatrix1D matrix2 = new DenseDoubleMatrix1D(points2);
+//			return vectorFunction.apply(matrix1, matrix2);
+			
+			// With for loops
+			double sum = 0.0;
+			for (int i=0; i<points1.length; i++) {
+				double diff = points1[i]-points2[i];
+				sum += diff * diff;
+			}
+//			return Math.sqrt(sum);
+			return sum; // Use where we're only comparing relative distances.
+		}
+		
+		public static double euclideanDistance(DoubleMatrix1D matrix1, DoubleMatrix1D matrix2) {
+			return vectorFunction.apply(matrix1, matrix2);
+		}
+		
+		/*
+		 * Calculate the Cosine Similarity, comparing each corresponding point.
+		 * There must be the same number of elements in points1 as in points2.
+		 */
+		public static double cosineSimilarity(List<Double> points1, List<Double> points2) {
+			double dotProduct = dotMultiply(points1, points2);
+			double sqSum1 = getSumOfSquaresRoot(points1);
+			double sqSum2 = getSumOfSquaresRoot(points2);
+			return dotProduct / (sqSum1 * sqSum2);
+		}
+		
+		public static double cosineSimilarity(double[] points1, double[] points2) {
+			DoubleMatrix1D matrix1 = new DenseDoubleMatrix1D(points1);
+			DoubleMatrix1D matrix2 = new DenseDoubleMatrix1D(points1);
+			return matrix1.zDotProduct(matrix2) / (Math.sqrt(matrix1.zDotProduct(matrix1) * matrix2.zDotProduct(matrix2)));
+			// Try Algebra.DEFAULT.norm2?
+			
+			// With for loops
+//			double dotProduct = dotMultiply(points1, points2);
+//			double sqSum1 = getSumOfSquaresRoot(points1);
+//			double sqSum2 = getSumOfSquaresRoot(points2);
+//			return dotProduct / (sqSum1 * sqSum2);
+		}
+		public static double cosineSimilarity(DoubleMatrix1D matrix1, DoubleMatrix1D matrix2) {
+			return matrix1.zDotProduct(matrix2) / (Math.sqrt(matrix1.zDotProduct(matrix1) * matrix2.zDotProduct(matrix2)));
+		}
+		
+		public static double cosineSimilarity(DoubleMatrix1D matrix1, DoubleMatrix1D matrix2, double squaresSum2) {
+			return matrix1.zDotProduct(matrix2) / (Math.sqrt(matrix1.zDotProduct(matrix1)) * squaresSum2);
+		}
+		
+//		DoubleMatrix1D matrix1 = DoubleFactory1D.dense.make(points1);
+		
+		
+		/*
+		 * Subtract each corresponding element in the lists.
+		 * Subtract point2 from point1.
+		 */
+		public static List<Double> subtract(List<Double> points1, List<Double> points2) {
+			List<Double> resultList = new ArrayList<Double>();
+			for (int i=0; i<points1.size(); i++) {
+				resultList.add(points1.get(i) - points2.get(i));
+			}
+			return resultList;
+		}
+		
+		public static double[] subtract(double[] points1, double[] points2) {
+			double[] resultList = new double[points1.length];
+			for (int i=0; i<points1.length; i++) {
+				resultList[i] = points1[i] - points2[i];
+			}
+			return resultList;
+		}
+		
+		/*
+		 * Add each corresponding element in the lists.
+		 * Add point2 to point1.
+		 */
+		public static List<Double> add(List<Double> points1, List<Double> points2) {
+			List<Double> resultList = new ArrayList<Double>();
+			for (int i=0; i<points1.size(); i++) {
+				resultList.add(points1.get(i) + points2.get(i));
+			}
+			return resultList;
+		}
+		
+		public static double[] add(double[] points1, double[] points2) {
+			double[] resultList = new double[points1.length];
+			for (int i=0; i<points1.length; i++) {
+				resultList[i] = points1[i] + points2[i];
+			}
+			return resultList;
+		}
+		
+		/*
+		 * Multiply each corresponding element in the lists.
+		 */
+		public static double dotMultiply(List<Double> points1, List<Double> points2) {
+			double sum = 0.0;
+			for (int i=0; i<points1.size(); i++) {
+				sum += points1.get(i) * points2.get(i);
+			}
+			return sum;
+		}
+		
+		public static double dotMultiply(double[] points1, double[] points2) {
+			DoubleMatrix1D matrix1 = new DenseDoubleMatrix1D(points1);
+			DoubleMatrix1D matrix2 = new DenseDoubleMatrix1D(points1);
+			return matrix1.zDotProduct(matrix2);
+			// With for loops
+//			double sum = 0.0;
+//			for (int i=0; i<points1.length; i++) {
+//				sum += points1[i] * points2[i];
+//			}
+//			return sum;
 		}
  }
