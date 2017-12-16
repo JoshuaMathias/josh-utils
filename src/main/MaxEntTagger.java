@@ -212,15 +212,15 @@ public class MaxEntTagger {
 		String final_train_file = output_dir+File.separator+"final_train.vectors.txt";
 		FileUtils.writeFile(final_train_file, FeatureToken.featureTokensToString(tokenLines, featureCounts).replace(",","comma"));
 		
-//		// Create final_test.vectors.txt
-//		// Feature vectors for the test_file.
-//		// Same format as final_train.vectors.txt
-//		// 1.5. Create and write feature vectors for test_file.
-//		// 1.6. Replace all occurrences of "," with "comma" (for Mallet).
-//		List<List<String[]>> testSentences = ParseUtils.getLinesAsPOSSentences(FileUtils.readFile(test_file));
-//		extractFeatures(testSentences, rare_thres, trainVoc, false);
-//		String final_test_file = output_dir+File.separator+"final_test.vectors.txt";
-//		FileUtils.writeFile(final_test_file, FeatureToken.featureTokensToString(tokenLines, featureCounts).replace(",","comma"));
+		// Create final_test.vectors.txt
+		// Feature vectors for the test_file.
+		// Same format as final_train.vectors.txt
+		// 1.5. Create and write feature vectors for test_file.
+		// 1.6. Replace all occurrences of "," with "comma" (for Mallet).
+		List<List<String[]>> testSentences = ParseUtils.getLinesAsPOSSentences(FileUtils.readFile(test_file));
+		extractFeatures(testSentences, rare_thres, trainVoc, false);
+		String final_test_file = output_dir+File.separator+"final_test.vectors.txt";
+		FileUtils.writeFile(final_test_file, FeatureToken.featureTokensToString(tokenLines, featureCounts).replace(",","comma"));
 //		
 //		String malletDir="";
 //		String scriptFile = output_dir+File.separator+"script.sh";
